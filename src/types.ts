@@ -105,10 +105,8 @@ export interface SDKResultMessage {
 export interface SDKPartialMessage {
   type: 'partial_message'
   partial: {
-    type: 'text' | 'tool_use'
+    type: 'text' | 'thinking'
     text?: string
-    name?: string
-    input?: string
   }
 }
 
