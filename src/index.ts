@@ -69,6 +69,7 @@ export type {
   NormalizedContentBlock,
   NormalizedTool,
   NormalizedResponseBlock,
+  StreamChunk,
 } from './providers/index.js'
 
 // --------------------------------------------------------------------------
