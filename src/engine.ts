@@ -165,6 +165,7 @@ export class QueryEngine {
   private buildResponseFromChunks(chunks: import('./providers/types.js').StreamChunk[]): CreateMessageResponse {
     const content: import('./providers/types.js').NormalizedResponseBlock[] = []
     let currentBlock: import('./providers/types.js').NormalizedResponseBlock | null = null
+    const toolUses: Map<number, { name: string; input: string }> = new Map()
 
     for (const chunk of chunks) {
       if (chunk.type === 'done') continue
@@ -184,27 +185,43 @@ export class QueryEngine {
       }
 
       if (chunk.type === 'tool_use') {
-        if (chunk.input !== undefined) {
-          // Complete tool use
-          let input: any
-          try {
-            input = JSON.parse(chunk.input)
-          } catch {
-            input = chunk.input
-          }
-          content.push({
-            type: 'tool_use',
-            id: `tool_${chunk.index}`,
-            name: chunk.name || '',
-            input,
-          })
+        // Accumulate tool_use chunks by index
+        const toolUse = toolUses.get(chunk.index) || { name: '', input: '' }
+        if (chunk.name) {
+          toolUse.name = chunk.name
         }
+        if (chunk.input !== undefined && chunk.input !== '') {
+          toolUse.input = chunk.input
+        }
+        toolUses.set(chunk.index, toolUse)
       }
     }
 
+    // Build complete tool_use blocks
+    for (const [index, toolUse] of toolUses) {
+      if (toolUse.name && toolUse.input) {
+        let input: any
+        try {
+          input = JSON.parse(toolUse.input)
+        } catch {
+          input = toolUse.input
+        }
+        content.push({
+          type: 'tool_use',
+          id: `tool_${index}`,
+          name: toolUse.name,
+          input,
+        })
+      }
+    }
+
+    // Determine stop reason based on content
+    const hasToolUse = content.some(block => block.type === 'tool_use')
+    const hasText = content.some(block => block.type === 'text')
+
     return {
       content,
-      stopReason: 'end_turn',
+      stopReason: hasToolUse ? 'tool_use' : 'end_turn',
       usage: { input_tokens: 0, output_tokens: 0 },
     }
   }
