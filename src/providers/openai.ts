@@ -15,7 +15,43 @@ import type {
   NormalizedContentBlock,
   NormalizedTool,
   NormalizedResponseBlock,
+  StreamChunk,
 } from './types.js'
+
+// --------------------------------------------------------------------------
+// SSE Stream Parsing
+// --------------------------------------------------------------------------
+
+/**
+ * Parse SSE (Server-Sent Events) stream from OpenAI
+ */
+async function* parseSSEStream(response: Response): AsyncGenerator<any> {
+  const reader = response.body!.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('data: ')) {
+        const data = trimmed.slice(6)
+        if (data === '[DONE]') return
+        try {
+          yield JSON.parse(data)
+        } catch {
+          // Ignore parse errors
+        }
+      }
+    }
+  }
+}
 
 // --------------------------------------------------------------------------
 // OpenAI-specific types (minimal, just what we need)
@@ -116,6 +152,100 @@ export class OpenAIProvider implements LLMProvider {
 
     // Convert response back to normalized format
     return this.convertResponse(data)
+  }
+
+  async *createMessageStream(params: CreateMessageParams): AsyncGenerator<StreamChunk> {
+    const messages = this.convertMessages(params.system, params.messages)
+    const tools = params.tools ? this.convertTools(params.tools) : undefined
+
+    const body: Record<string, any> = {
+      model: params.model,
+      max_tokens: params.maxTokens,
+      messages,
+      stream: true,
+    }
+
+    if (tools && tools.length > 0) {
+      body.tools = tools
+    }
+
+    const response = await fetch(`${this.baseURL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify(body),
+    })
+
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => '')
+      const err: any = new Error(
+        `OpenAI API error: ${response.status} ${response.statusText}: ${errBody}`,
+      )
+      err.status = response.status
+      throw err
+    }
+
+    let currentBlockIndex = -1
+    const toolCalls: Map<number, { id: string; name: string; arguments: string }> = new Map()
+
+    for await (const chunk of parseSSEStream(response)) {
+      const choice = chunk.choices?.[0]
+      if (!choice) continue
+
+      const delta = choice.delta
+      if (!delta) continue
+
+      // Text content
+      if (delta.content) {
+        yield {
+          type: 'text',
+          index: currentBlockIndex,
+          delta: delta.content,
+        }
+      }
+
+      // Tool calls
+      if (delta.tool_calls) {
+        for (const tc of delta.tool_calls) {
+          const index = tc.index || 0
+          currentBlockIndex = index
+
+          if (!toolCalls.has(index)) {
+            toolCalls.set(index, { id: tc.id || '', name: '', arguments: '' })
+          }
+
+          const call = toolCalls.get(index)!
+
+          if (tc.function?.name) {
+            call.name += tc.function.name
+          }
+
+          if (tc.function?.arguments) {
+            call.arguments += tc.function.arguments
+          }
+
+          if (tc.id) {
+            call.id = tc.id
+          }
+
+          // Yield complete tool_use when finished
+          if (choice.finish_reason === 'tool_calls' || choice.finish_reason === 'stop') {
+            if (call.name) {
+              yield {
+                type: 'tool_use',
+                index,
+                name: call.name,
+                input: call.arguments,
+              }
+            }
+          }
+        }
+      }
+    }
+
+    yield { type: 'done', index: -1 }
   }
 
   // --------------------------------------------------------------------------
