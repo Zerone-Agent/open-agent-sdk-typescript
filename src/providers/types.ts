@@ -72,6 +72,14 @@ export type NormalizedResponseBlock =
   | { type: 'text'; text: string }
   | { type: 'tool_use'; id: string; name: string; input: any }
 
+export interface StreamChunk {
+  type: 'text' | 'thinking' | 'tool_use' | 'done'
+  index: number
+  delta?: string
+  name?: string
+  input?: string
+}
+
 // --------------------------------------------------------------------------
 // Provider Interface
 // --------------------------------------------------------------------------
@@ -82,4 +90,7 @@ export interface LLMProvider {
 
   /** Send a message and get a response. */
   createMessage(params: CreateMessageParams): Promise<CreateMessageResponse>
+
+  /** Send a message and stream the response. */
+  createMessageStream?(params: CreateMessageParams): AsyncGenerator<StreamChunk>
 }
