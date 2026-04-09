@@ -10,6 +10,7 @@ import type {
   LLMProvider,
   CreateMessageParams,
   CreateMessageResponse,
+  StreamChunk,
 } from './types.js'
 
 export class AnthropicProvider implements LLMProvider {
@@ -34,7 +35,6 @@ export class AnthropicProvider implements LLMProvider {
         : undefined,
     }
 
-    // Add extended thinking if configured
     if (params.thinking?.type === 'enabled' && params.thinking.budget_tokens) {
       (requestParams as any).thinking = {
         type: 'enabled',
@@ -56,5 +56,83 @@ export class AnthropicProvider implements LLMProvider {
           (response.usage as any).cache_read_input_tokens,
       },
     }
+  }
+
+  async *createMessageStream(params: CreateMessageParams): AsyncGenerator<StreamChunk> {
+    const requestParams: Anthropic.MessageCreateParamsStreaming = {
+      model: params.model,
+      max_tokens: params.maxTokens,
+      system: params.system,
+      messages: params.messages as Anthropic.MessageParam[],
+      tools: params.tools
+        ? (params.tools as Anthropic.Tool[])
+        : undefined,
+      stream: true,
+    }
+
+    if (params.thinking?.type === 'enabled' && params.thinking.budget_tokens) {
+      (requestParams as any).thinking = {
+        type: 'enabled',
+        budget_tokens: params.thinking.budget_tokens,
+      }
+    }
+
+    const stream = await this.client.messages.create(requestParams)
+
+    let currentBlockIndex = -1
+    const toolInputs: Map<number, string> = new Map()
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_start') {
+        currentBlockIndex = event.index
+        
+        if (event.content_block.type === 'tool_use') {
+          yield {
+            type: 'tool_use',
+            index: event.index,
+            name: event.content_block.name,
+            input: '',
+          }
+        }
+      }
+      
+      if (event.type === 'content_block_delta') {
+        const delta = event.delta
+        
+        if (delta.type === 'text_delta') {
+          yield {
+            type: 'text',
+            index: currentBlockIndex,
+            delta: delta.text,
+          }
+        }
+        
+        if (delta.type === 'thinking_delta') {
+          yield {
+            type: 'thinking',
+            index: currentBlockIndex,
+            delta: delta.thinking,
+          }
+        }
+        
+        if (delta.type === 'input_json_delta') {
+          const existing = toolInputs.get(currentBlockIndex) || ''
+          toolInputs.set(currentBlockIndex, existing + delta.partial_json)
+        }
+      }
+      
+      if (event.type === 'content_block_stop') {
+        if (toolInputs.has(event.index)) {
+          yield {
+            type: 'tool_use',
+            index: event.index,
+            input: toolInputs.get(event.index),
+          }
+          toolInputs.delete(event.index)
+        }
+      }
+    }
+
+    yield { type: 'done', index: -1 }
   }
 }
