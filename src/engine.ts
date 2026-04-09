@@ -160,6 +160,61 @@ export class QueryEngine {
   }
 
   /**
+   * Build complete response from stream chunks
+   */
+  private buildResponseFromChunks(chunks: import('./providers/types.js').StreamChunk[]): CreateMessageResponse {
+    const content: import('./providers/types.js').NormalizedResponseBlock[] = []
+    let currentBlock: import('./providers/types.js').NormalizedResponseBlock | null = null
+    const toolInputs: Map<number, string> = new Map()
+
+    for (const chunk of chunks) {
+      if (chunk.type === 'done') continue
+
+      if (chunk.type === 'text') {
+        if (!currentBlock || currentBlock.type !== 'text') {
+          currentBlock = { type: 'text', text: chunk.delta || '' }
+          content.push(currentBlock)
+        } else {
+          currentBlock.text += chunk.delta || ''
+        }
+      }
+
+      if (chunk.type === 'thinking') {
+        // Thinking is not part of NormalizedResponseBlock, skip for now
+        // Could be added to content if needed
+      }
+
+      if (chunk.type === 'tool_use') {
+        if (chunk.name) {
+          // Start of tool use
+          toolInputs.set(chunk.index, '')
+        }
+        if (chunk.input !== undefined) {
+          // Complete tool use
+          let input: any
+          try {
+            input = JSON.parse(chunk.input)
+          } catch {
+            input = chunk.input
+          }
+          content.push({
+            type: 'tool_use',
+            id: `tool_${chunk.index}`,
+            name: chunk.name || '',
+            input,
+          })
+        }
+      }
+    }
+
+    return {
+      content,
+      stopReason: 'end_turn',
+      usage: { input_tokens: 0, output_tokens: 0 },
+    }
+  }
+
+  /**
    * Execute hooks for a lifecycle event.
    * Returns hook outputs; never throws.
    */
@@ -273,28 +328,66 @@ export class QueryEngine {
       // Make API call with retry via provider
       let response: CreateMessageResponse
       const apiStart = performance.now()
+
       try {
-        response = await withRetry(
-          async () => {
-            return this.provider.createMessage({
-              model: this.config.model,
-              maxTokens: this.config.maxTokens,
-              system: systemPrompt,
-              messages: apiMessages,
-              tools: tools.length > 0 ? tools : undefined,
-              thinking:
-                this.config.thinking?.type === 'enabled' &&
-                this.config.thinking.budgetTokens
-                  ? {
-                      type: 'enabled',
-                      budget_tokens: this.config.thinking.budgetTokens,
-                    }
-                  : undefined,
-            })
-          },
-          undefined,
-          this.config.abortSignal,
-        )
+        if (this.config.includePartialMessages) {
+          // Streaming mode
+          const chunks: import('./providers/types.js').StreamChunk[] = []
+
+          for await (const chunk of this.provider.createMessageStream!({
+            model: this.config.model,
+            maxTokens: this.config.maxTokens,
+            system: systemPrompt,
+            messages: apiMessages,
+            tools: tools.length > 0 ? tools : undefined,
+            thinking:
+              this.config.thinking?.type === 'enabled' &&
+              this.config.thinking.budgetTokens
+                ? {
+                    type: 'enabled',
+                    budget_tokens: this.config.thinking.budgetTokens,
+                  }
+                : undefined,
+          })) {
+            chunks.push(chunk)
+
+            // Yield partial messages for text and thinking
+            if (chunk.type === 'text' || chunk.type === 'thinking') {
+              yield {
+                type: 'partial_message',
+                partial: {
+                  type: chunk.type,
+                  text: chunk.delta || '',
+                },
+              }
+            }
+          }
+
+          response = this.buildResponseFromChunks(chunks)
+        } else {
+          // Non-streaming mode
+          response = await withRetry(
+            async () => {
+              return this.provider.createMessage({
+                model: this.config.model,
+                maxTokens: this.config.maxTokens,
+                system: systemPrompt,
+                messages: apiMessages,
+                tools: tools.length > 0 ? tools : undefined,
+                thinking:
+                  this.config.thinking?.type === 'enabled' &&
+                  this.config.thinking.budgetTokens
+                    ? {
+                        type: 'enabled',
+                        budget_tokens: this.config.thinking.budgetTokens,
+                      }
+                    : undefined,
+              })
+            },
+            undefined,
+            this.config.abortSignal,
+          )
+        }
       } catch (err: any) {
         // Handle prompt-too-long by compacting
         if (isPromptTooLongError(err) && !this.compactState.compacted) {
