@@ -40,6 +40,7 @@ import { createHookRegistry, type HookRegistry } from './hooks.js'
 import { initBundledSkills, loadSkillsFromFilesystem } from './skills/index.js'
 import { createProvider, type LLMProvider, type ApiType } from './providers/index.js'
 import type { NormalizedMessageParam } from './providers/types.js'
+import { SYSTEM_PROMPTS } from './prompts/system-prompts.js'
 
 // --------------------------------------------------------------------------
 // Agent class
@@ -256,14 +257,22 @@ export class Agent {
 
     // Resolve systemPrompt (handle preset object)
     let systemPrompt: string | undefined
-    let appendSystemPrompt = opts.appendSystemPrompt
-    if (typeof opts.systemPrompt === 'object' && opts.systemPrompt?.type === 'preset') {
-      systemPrompt = undefined // Use engine default (default style)
-      if (opts.systemPrompt.append) {
-        appendSystemPrompt = (appendSystemPrompt || '') + '\n' + opts.systemPrompt.append
+    let appendSystemPrompt = opts.appendSystemPrompt || ''
+
+    if (opts.systemPrompt) {
+      if (typeof opts.systemPrompt === 'object' && opts.systemPrompt?.type === 'preset') {
+        // Use preset as base prompt
+        systemPrompt = SYSTEM_PROMPTS[opts.systemPrompt.preset]
+        if (opts.systemPrompt.append) {
+          appendSystemPrompt += '\n' + opts.systemPrompt.append
+        }
+      } else {
+        // Custom string - replace base prompt entirely
+        systemPrompt = opts.systemPrompt as string
       }
     } else {
-      systemPrompt = opts.systemPrompt as string | undefined
+      // Default: use minimal preset
+      systemPrompt = SYSTEM_PROMPTS.default
     }
 
     // Build canUseTool based on permission mode
@@ -321,6 +330,7 @@ export class Agent {
       agents: opts.agents,
       hookRegistry: this.hookRegistry,
       sessionId: this.sid,
+      settingSources: opts.settingSources,
     })
     this.currentEngine = engine
 
