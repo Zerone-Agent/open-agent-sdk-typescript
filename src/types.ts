@@ -121,6 +121,7 @@ export interface SDKSystemMessage {
   cwd: string
   mcp_servers: Array<{ name: string; status: string }>
   permission_mode: string
+  system_prompt?: string
 }
 
 /** Marks a compaction boundary in the conversation. */

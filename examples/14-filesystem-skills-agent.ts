@@ -5,7 +5,7 @@
  */
 import { mkdir, writeFile, rm } from 'fs/promises'
 import { join } from 'path'
-import { createAgent, getSkill, getAllSkills } from '../src/index.js'
+import { createAgent, getSkill } from '../src/index.js'
 
 async function main() {
   console.log('=== Example 14: Filesystem Skills ===\n')
@@ -37,8 +37,8 @@ Arguments: \${args}
     // Create agent with settingSources
     const agent = createAgent({
       cwd: testDir,
-      settingSources: ['project'], // Load from .claude/skills/
-      maxTurns: 1,
+      settingSources: ['project'],
+      maxTurns: 2,
     })
 
     // Wait for skills to load
@@ -49,22 +49,43 @@ Arguments: \${args}
     console.log('Loaded skill:', !!skill)
     console.log('Name:', skill?.name)
     console.log('Description:', skill?.description)
-    console.log('Model:', skill?.model)
-    console.log('Allowed tools:', skill?.allowedTools)
     console.log()
 
-    // Test invocation
-    if (skill) {
-      const blocks = await skill.getPrompt('test arguments', { cwd: testDir } as any)
-      console.log('Prompt preview (first 200 chars):')
-      console.log(blocks[0]?.type === 'text' ? blocks[0].text.slice(0, 200) + '...' : '(no text)')
+    // Test with actual LLM query
+    console.log('=== Sending query to agent ===\n')
+    
+    const messages: any[] = []
+    for await (const event of agent.query('Use the filesystem-example skill to read the SKILL.md file')) {
+      messages.push(event)
+      
+      if (event.type === 'system') {
+        console.log('--- System Message ---')
+        console.log(JSON.stringify(event, null, 2))
+      } else if (event.type === 'assistant') {
+        console.log('--- Assistant Message ---')
+        console.log(JSON.stringify(event.message, null, 2))
+      } else if (event.type === 'tool_result') {
+        console.log('--- Tool Result ---')
+        console.log(JSON.stringify(event.result, null, 2))
+      } else if (event.type === 'result') {
+        console.log('--- Final Result ---')
+        console.log(JSON.stringify(event, null, 2))
+      }
     }
+
+    console.log('\n=== All Events Summary ===')
+    console.log('Total events:', messages.length)
+    console.log('Event types:', messages.map(m => m.type).join(', '))
+    
+    // Get session messages
+    const sessionMessages = agent.getMessages()
+    console.log('\n=== Session Messages (full history) ===')
+    console.log(JSON.stringify(sessionMessages, null, 2))
 
     await agent.close()
     console.log('\n✓ Example completed successfully')
 
   } finally {
-    // Cleanup
     await rm(testDir, { recursive: true, force: true })
   }
 }

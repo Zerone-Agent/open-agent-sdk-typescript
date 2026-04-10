@@ -294,6 +294,7 @@ export class QueryEngine {
       cwd: this.config.cwd,
       mcp_servers: [],
       permission_mode: 'bypassPermissions',
+      system_prompt: systemPrompt,
     } as SDKMessage
 
     // Agentic loop
