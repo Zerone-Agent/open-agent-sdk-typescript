@@ -170,6 +170,8 @@ console.log(r.text);
 
 Skills are reusable prompt templates that extend agent capabilities. Five bundled skills are included: `simplify`, `commit`, `review`, `debug`, `test`.
 
+#### Programmatic Registration
+
 ```typescript
 import {
   createAgent,
@@ -199,6 +201,44 @@ const agent = createAgent();
 const result = await agent.prompt('Use the "explain" skill to explain git rebase');
 console.log(result.text);
 ```
+
+#### Filesystem Skills (Claude Code compatible)
+
+Create `.claude/skills/my-skill/SKILL.md`:
+
+```yaml
+---
+description: Analyze code quality
+model: claude-sonnet-4-6
+allowed-tools:
+  - Read
+  - Glob
+---
+
+Analyze the codebase structure and provide recommendations.
+```
+
+Load in your application:
+
+```typescript
+import { createAgent } from "@codeany/open-agent-sdk";
+
+const agent = createAgent({
+  cwd: "/path/to/project",
+  settingSources: ["project"], // Load from .claude/skills/
+});
+
+// Or load user-level skills:
+const agent = createAgent({
+  settingSources: ["user"], // Load from ~/.claude/skills/
+});
+```
+
+**Setting source priority:**
+
+- `['user']`: Load from `~/.claude/skills/`
+- `['project']`: Load from `${cwd}/.claude/skills/`
+- `['user', 'project']`: Load both (project skills override user skills)
 
 ### Hooks (lifecycle events)
 
@@ -471,7 +511,8 @@ Register custom skills with `registerSkill()`.
 | 11  | `examples/11-custom-mcp-tools.ts`     | `tool()` + `createSdkMcpServer()`      |
 | 12  | `examples/12-skills.ts`              | Skill system usage                     |
 | 13  | `examples/13-hooks.ts`               | Lifecycle hooks                        |
-| 14  | `examples/14-openai-compat.ts`       | OpenAI / DeepSeek models               |
+| 14  | `examples/14-filesystem-skills-agent.ts` | Filesystem skills loading          |
+| 15  | `examples/14-openai-compat.ts`       | OpenAI / DeepSeek models               |
 | web | `examples/web/`                       | Web chat UI for testing                |
 
 Run any example:
