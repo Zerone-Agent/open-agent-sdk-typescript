@@ -171,6 +171,7 @@ export {
   clearSkills,
   formatSkillsForPrompt,
   initBundledSkills,
+  loadSkillsFromFilesystem,
 } from './skills/index.js'
 export type {
   SkillDefinition,

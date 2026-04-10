@@ -37,7 +37,7 @@ import {
   loadSession,
 } from './session.js'
 import { createHookRegistry, type HookRegistry } from './hooks.js'
-import { initBundledSkills } from './skills/index.js'
+import { initBundledSkills, loadSkillsFromFilesystem } from './skills/index.js'
 import { createProvider, type LLMProvider, type ApiType } from './providers/index.js'
 import type { NormalizedMessageParam } from './providers/types.js'
 
@@ -221,6 +221,17 @@ export class Agent {
       if (sessionData) {
         this.history = sessionData.messages
         this.sid = this.cfg.resume
+      }
+    }
+
+    // Load filesystem skills if settingSources is configured
+    if (this.cfg.settingSources && this.cfg.settingSources.length > 0) {
+      try {
+        const cwd = this.cfg.cwd ?? process.cwd()
+        await loadSkillsFromFilesystem(cwd, this.cfg.settingSources)
+      } catch (error) {
+        // Don't fail agent startup
+        console.error('Failed to load filesystem skills:', error)
       }
     }
   }
