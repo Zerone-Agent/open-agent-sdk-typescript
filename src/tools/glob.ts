@@ -29,14 +29,15 @@ export const GlobTool = defineTool({
     const { pattern } = input
 
     try {
-      // Use Node.js glob (available in Node 22+) or fall back to bash find
-      const { glob } = await import('fs/promises')
-
-      // @ts-ignore - glob is available in Node 22+
-      if (typeof glob === 'function') {
+      // Use Node.js glob (available in Node 22+)
+      // @ts-ignore - glob is available in Node 22+, ts lib is older
+      const fsPromises = await import('fs/promises')
+      // @ts-ignore
+      const globFn = fsPromises.glob
+      if (typeof globFn === 'function') {
         const matches: string[] = []
         // @ts-ignore
-        for await (const entry of glob(pattern, { cwd: searchDir })) {
+        for await (const entry of globFn(pattern, { cwd: searchDir })) {
           matches.push(entry)
           if (matches.length >= 500) break
         }

@@ -79,15 +79,16 @@ export function tool<T extends ZodRawShape>(
  * Convert an SdkMcpToolDefinition to a ToolDefinition for the engine.
  */
 export function sdkToolToToolDefinition(sdkTool: SdkMcpToolDefinition<any>): ToolDefinition {
-  const jsonSchema = zodToJsonSchema(sdkTool.inputSchema, { target: 'openApi3' }) as any
+  // @ts-ignore - zodToJsonSchema type depth issue
+  const jsonSchema = zodToJsonSchema(sdkTool.inputSchema, { target: 'openApi3' }) as Record<string, unknown>
 
   return {
     name: sdkTool.name,
     description: sdkTool.description,
     inputSchema: {
       type: 'object',
-      properties: jsonSchema.properties || {},
-      required: jsonSchema.required || [],
+      properties: (jsonSchema.properties as Record<string, unknown>) || {},
+      required: (jsonSchema.required as string[]) || [],
     },
     isReadOnly: () => sdkTool.annotations?.readOnlyHint ?? false,
     isConcurrencySafe: () => sdkTool.annotations?.readOnlyHint ?? false,
