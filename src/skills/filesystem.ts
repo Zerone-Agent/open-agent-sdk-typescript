@@ -1,6 +1,6 @@
 /**
  * Filesystem Skills Loader
- * 
+ *
  * Loads SKILL.md files from .claude/skills/ directories.
  */
 
@@ -65,7 +65,7 @@ async function loadSkillsFromDir(
 
   try {
     const entries = await readdir(dir, { withFileTypes: true })
-    const skillDirs = entries.filter(entry => entry.isDirectory())
+    const skillDirs = entries.filter(entry => entry.isDirectory() || entry.isSymbolicLink())
 
     for (const skillDir of skillDirs) {
       const skillPath = join(dir, skillDir.name, 'SKILL.md')

@@ -44,10 +44,10 @@ async function main() {
   const agent4 = createAgent({
     model: process.env.CODEANY_MODEL || 'claude-sonnet-4-6',
     maxTurns: 1,
-    systemPrompt: { 
-      type: 'preset', 
-      preset: 'claude_code', 
-      append: '\nAlways respond in exactly one sentence.' 
+    systemPrompt: {
+      type: 'preset',
+      preset: 'claude_code',
+      append: '\nAlways respond in exactly one sentence.'
     },
   })
 

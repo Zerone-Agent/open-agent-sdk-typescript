@@ -1,6 +1,6 @@
 /**
  * Example 14: Filesystem Skills
- * 
+ *
  * Demonstrates loading skills from .claude/skills/ directory.
  */
 import { mkdir, writeFile, rm } from 'fs/promises'
@@ -53,11 +53,11 @@ Arguments: \${args}
 
     // Test with actual LLM query
     console.log('=== Sending query to agent ===\n')
-    
+
     const messages: any[] = []
     for await (const event of agent.query('Use the filesystem-example skill to read the SKILL.md file')) {
       messages.push(event)
-      
+
       if (event.type === 'system') {
         console.log('--- System Message ---')
         console.log(JSON.stringify(event, null, 2))
@@ -76,7 +76,7 @@ Arguments: \${args}
     console.log('\n=== All Events Summary ===')
     console.log('Total events:', messages.length)
     console.log('Event types:', messages.map(m => m.type).join(', '))
-    
+
     // Get session messages
     const sessionMessages = agent.getMessages()
     console.log('\n=== Session Messages (full history) ===')
