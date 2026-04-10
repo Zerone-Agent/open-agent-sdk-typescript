@@ -404,6 +404,7 @@ export type {
   QueryResult,
   ThinkingConfig,
   TokenUsage,
+  SystemPromptPreset,
 
   // Engine types
   QueryEngineConfig,
