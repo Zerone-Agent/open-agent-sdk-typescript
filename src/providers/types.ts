@@ -75,6 +75,7 @@ export type NormalizedResponseBlock =
 export interface StreamChunk {
   type: 'text' | 'thinking' | 'tool_use' | 'usage' | 'done'
   index: number
+  id?: string
   delta?: string
   name?: string
   input?: string

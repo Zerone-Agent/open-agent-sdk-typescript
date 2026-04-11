@@ -180,7 +180,7 @@ export class QueryEngine {
   private buildResponseFromChunks(chunks: import('./providers/types.js').StreamChunk[]): CreateMessageResponse {
     const content: import('./providers/types.js').NormalizedResponseBlock[] = []
     let currentBlock: import('./providers/types.js').NormalizedResponseBlock | null = null
-    const toolUses: Map<number, { name: string; input: string }> = new Map()
+    const toolUses: Map<number, { id: string; name: string; input: string }> = new Map()
 
     for (const chunk of chunks) {
       if (chunk.type === 'done') continue
@@ -201,7 +201,10 @@ export class QueryEngine {
 
       if (chunk.type === 'tool_use') {
         // Accumulate tool_use chunks by index
-        const toolUse = toolUses.get(chunk.index) || { name: '', input: '' }
+        const toolUse = toolUses.get(chunk.index) || { id: '', name: '', input: '' }
+        if (chunk.id) {
+          toolUse.id = chunk.id
+        }
         if (chunk.name) {
           toolUse.name = chunk.name
         }
@@ -223,7 +226,7 @@ export class QueryEngine {
         }
         content.push({
           type: 'tool_use',
-          id: `tool_${index}`,
+          id: toolUse.id || `tool_${index}`,
           name: toolUse.name,
           input,
         })

@@ -81,6 +81,7 @@ export class AnthropicProvider implements LLMProvider {
 
     let currentBlockIndex = -1
     const toolInputs: Map<number, string> = new Map()
+    const toolUseIds: Map<number, string> = new Map()
 
     for await (const event of stream) {
       if (event.type === 'message_start') {
@@ -115,9 +116,12 @@ export class AnthropicProvider implements LLMProvider {
         currentBlockIndex = event.index
         
         if (event.content_block.type === 'tool_use') {
+          const toolId = (event.content_block as any).id || ''
+          toolUseIds.set(event.index, toolId)
           yield {
             type: 'tool_use',
             index: event.index,
+            id: toolId,
             name: event.content_block.name,
             input: '',
           }
@@ -154,9 +158,11 @@ export class AnthropicProvider implements LLMProvider {
           yield {
             type: 'tool_use',
             index: event.index,
+            id: toolUseIds.get(event.index) || '',
             input: toolInputs.get(event.index),
           }
           toolInputs.delete(event.index)
+          toolUseIds.delete(event.index)
         }
       }
     }

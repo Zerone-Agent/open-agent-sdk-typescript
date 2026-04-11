@@ -252,6 +252,7 @@ export class OpenAIProvider implements LLMProvider {
         yield {
           type: 'tool_use',
           index,
+          id: call.id,
           name: call.name,
           input: call.arguments,
         }
