@@ -35,7 +35,7 @@ function isGitRepo(cwd: string): boolean {
  *
  * Example output:
  *
- *   You are powered by the model named claude-sonnet-4-6. The exact model ID is opencode/claude-sonnet-4-6
+ *   You are powered by the model named claude-sonnet-4-6. The exact model ID is openagent/claude-sonnet-4-6
  *   Here is some useful information about the environment you are running in:
  *   <env>
  *     Working directory: /Users/zero/project
@@ -48,7 +48,7 @@ export async function getSystemContext(cwd: string, model?: string): Promise<str
   const lines: string[] = []
 
   if (model) {
-    lines.push(`You are powered by the model named ${model}. The exact model ID is opencode/${model}`)
+    lines.push(`You are powered by the model named ${model}. The exact model ID is openagent/${model}`)
   }
 
   lines.push('Here is some useful information about the environment you are running in:')
