@@ -42,7 +42,7 @@ import {
   withRetry,
   isPromptTooLongError,
 } from './utils/retry.js'
-import { getSystemContext, getUserContext } from './utils/context.js'
+import { getSystemContext } from './utils/context.js'
 import { normalizeMessagesForAPI } from './utils/messages.js'
 import type { HookRegistry, HookInput, HookOutput } from './hooks.js'
 import { formatSkillsForSystemPrompt, getUserInvocableSkills } from './skills/registry.js'
@@ -104,21 +104,10 @@ async function buildEnvironmentPrompt(config: QueryEngineConfig): Promise<string
     parts.push(skillsXml)
   }
 
-  // User context (AGENT.md / project instructions)
-  try {
-    const userCtx = await getUserContext(config.cwd)
-    if (userCtx) {
-      parts.push('\n# Project Context\n')
-      parts.push(userCtx)
-    }
-  } catch {
-    // Context is best-effort
-  }
-
-  // Load CLAUDE.md
+  // Load CLAUDE.md instructions
   const claudeMdContent = await loadClaudeMd(config.cwd, config.settingSources)
   if (claudeMdContent) {
-    parts.push('\n# CLAUDE.md Instructions\n')
+    parts.push('\n# Instructions\n')
     parts.push(claudeMdContent)
   }
 

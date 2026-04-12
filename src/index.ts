@@ -222,10 +222,6 @@ export type { SessionMetadata, SessionData } from './session.js'
 
 export {
   getSystemContext,
-  getUserContext,
-  readProjectContextContent,
-  discoverProjectContextFiles,
-  clearContextCache,
 } from './utils/context.js'
 
 // --------------------------------------------------------------------------
