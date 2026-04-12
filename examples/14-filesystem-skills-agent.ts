@@ -15,6 +15,17 @@ async function main() {
   const skillDir = join(testDir, '.claude', 'skills', 'example-skill')
 
   await mkdir(skillDir, { recursive: true })
+
+  // Setup: Create project-level AGENTS.md
+  await writeFile(join(testDir, 'AGENTS.md'), `# Project Instructions
+
+This is a test project for verifying filesystem skill loading.
+
+## Guidelines
+- Always use the filesystem-example skill when examining files
+- Prefer the Read tool over Bash for file inspection
+`)
+
   await writeFile(join(skillDir, 'SKILL.md'), `---
 name: filesystem-example
 description: An example skill loaded from filesystem

@@ -2,10 +2,8 @@
 
 export const SYSTEM_PROMPTS = {
   default: 'You are a helpful assistant.',
-  
-  claude_code: `## System Prompt
 
-I am Claude Code, Anthropic's official CLI for Claude, running within the Claude Agent SDK.
+  claude_code: `I am Claude Code, Anthropic's official CLI for Claude, running within the Claude Agent SDK.
 I am an interactive agent that helps users with software engineering tasks. Use the instructions below and the tools available to you to assist the user.
 
 **IMPORTANT:**

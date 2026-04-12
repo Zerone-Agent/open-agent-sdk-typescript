@@ -2,96 +2,64 @@
  * System & User Context
  *
  * Builds context for the system prompt:
- * - Git status injection (branch, commits, status)
+ * - <env> block: working directory, git repo status, platform, date, model identity
  * - AGENT.md / project context discovery and injection
- * - Working directory info
- * - Date injection
  */
 
 import { execSync } from 'child_process'
 import { readFile, stat } from 'fs/promises'
-import { join, resolve } from 'path'
-
-// Memoization cache
-let cachedGitStatus: string | null = null
-let cachedGitStatusCwd: string | null = null
+import { join } from 'path'
 
 /**
- * Get git status info for system prompt.
- * Memoized per cwd (cleared on new session).
+ * Check whether a directory is inside a git repository.
  */
-export async function getGitStatus(cwd: string): Promise<string> {
-  if (cachedGitStatus && cachedGitStatusCwd === cwd) {
-    return cachedGitStatus
-  }
-
+function isGitRepo(cwd: string): boolean {
   try {
-    const parts: string[] = []
-
-    const gitExec = (cmd: string, timeoutMs = 5000): string | null => {
-      try {
-        return execSync(cmd, {
-          cwd, timeout: timeoutMs, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'],
-        }).trim()
-      } catch {
-        return null
-      }
-    }
-
-    // Check if this is a git repo at all
-    if (!gitExec('git rev-parse --git-dir')) return ''
-
-    // Current branch
-    const branch = gitExec('git rev-parse --abbrev-ref HEAD')
-    if (branch) parts.push(`Current branch: ${branch}`)
-
-    // Main branch detection
-    const mainBranch = detectMainBranch(cwd)
-    if (mainBranch) parts.push(`Main branch: ${mainBranch}`)
-
-    // Git user
-    const user = gitExec('git config user.name', 3000)
-    if (user) parts.push(`Git user: ${user}`)
-
-    // Status (staged + unstaged)
-    const status = gitExec('git status --short')
-    if (status) {
-      const truncated = status.length > 2000
-        ? status.slice(0, 2000) + '\n...(truncated)'
-        : status
-      parts.push(`Status:\n${truncated}`)
-    }
-
-    // Recent commits (only if HEAD exists)
-    const hasHead = gitExec('git rev-parse HEAD')
-    if (hasHead) {
-      const log = gitExec('git log --oneline -5 --no-decorate')
-      if (log) parts.push(`Recent commits:\n${log}`)
-    }
-
-    cachedGitStatus = parts.join('\n\n')
-    cachedGitStatusCwd = cwd
-
-    return cachedGitStatus
+    execSync('git rev-parse --git-dir', {
+      cwd,
+      timeout: 3000,
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    return true
   } catch {
-    return ''
+    return false
   }
 }
 
 /**
- * Detect the main branch name (main or master).
+ * Get system context for the system prompt.
+ *
+ * Outputs a model identity line (if model is provided) followed by an
+ * <env> XML block — mirroring OpenCode's environment injection format.
+ *
+ * Example output:
+ *
+ *   You are powered by the model named claude-sonnet-4-6. The exact model ID is opencode/claude-sonnet-4-6
+ *   Here is some useful information about the environment you are running in:
+ *   <env>
+ *     Working directory: /Users/zero/project
+ *     Is directory a git repo: yes
+ *     Platform: darwin
+ *     Today's date: Sun Apr 13 2026
+ *   </env>
  */
-function detectMainBranch(cwd: string): string | null {
-  try {
-    const branches = execSync('git branch -l main master', {
-      cwd, timeout: 3000, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'],
-    }).trim()
-    if (branches.includes('main')) return 'main'
-    if (branches.includes('master')) return 'master'
-    return null
-  } catch {
-    return null
+export async function getSystemContext(cwd: string, model?: string): Promise<string> {
+  const lines: string[] = []
+
+  if (model) {
+    lines.push(`You are powered by the model named ${model}. The exact model ID is opencode/${model}`)
   }
+
+  lines.push('Here is some useful information about the environment you are running in:')
+  lines.push('<env>')
+  lines.push(`  Working directory: ${cwd}`)
+  lines.push(`  Is directory a git repo: ${isGitRepo(cwd) ? 'yes' : 'no'}`)
+  lines.push(`  Platform: ${process.platform}`)
+  lines.push(`  Today's date: ${new Date().toDateString()}`)
+  lines.push('</env>')
+
+  return lines.join('\n')
 }
 
 /**
@@ -99,6 +67,7 @@ function detectMainBranch(cwd: string): string | null {
  */
 export async function discoverProjectContextFiles(cwd: string): Promise<string[]> {
   const candidates = [
+    join(cwd, 'AGENTS.md'),
     join(cwd, 'AGENT.md'),
     join(cwd, 'CLAUDE.md'),
     join(cwd, '.claude', 'CLAUDE.md'),
@@ -108,18 +77,14 @@ export async function discoverProjectContextFiles(cwd: string): Promise<string[]
   // Also check home directory
   const home = process.env.HOME || process.env.USERPROFILE || ''
   if (home) {
-    candidates.push(
-      join(home, '.claude', 'CLAUDE.md'),
-    )
+    candidates.push(join(home, '.claude', 'CLAUDE.md'))
   }
 
   const found: string[] = []
   for (const path of candidates) {
     try {
       const s = await stat(path)
-      if (s.isFile()) {
-        found.push(path)
-      }
+      if (s.isFile()) found.push(path)
     } catch {
       // File doesn't exist
     }
@@ -151,41 +116,14 @@ export async function readProjectContextContent(cwd: string): Promise<string> {
 }
 
 /**
- * Get system context for the system prompt.
- */
-export async function getSystemContext(cwd: string): Promise<string> {
-  const parts: string[] = []
-
-  const gitStatus = await getGitStatus(cwd)
-  if (gitStatus) {
-    parts.push(`gitStatus: ${gitStatus}`)
-  }
-
-  return parts.join('\n\n')
-}
-
-/**
- * Get user context (AGENT.md, date, etc).
+ * Get user context (AGENT.md, project instructions, etc).
  */
 export async function getUserContext(cwd: string): Promise<string> {
-  const parts: string[] = []
-
-  // Current date
-  parts.push(`# currentDate\nToday's date is ${new Date().toISOString().split('T')[0]}.`)
-
-  // Project context files
   const projectCtx = await readProjectContextContent(cwd)
-  if (projectCtx) {
-    parts.push(projectCtx)
-  }
-
-  return parts.join('\n\n')
+  return projectCtx
 }
 
 /**
- * Clear memoized context (call between sessions).
+ * @deprecated No longer needed — git status details removed from system prompt.
  */
-export function clearContextCache(): void {
-  cachedGitStatus = null
-  cachedGitStatusCwd = null
-}
+export function clearContextCache(): void {}

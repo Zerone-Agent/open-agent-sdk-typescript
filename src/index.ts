@@ -223,7 +223,6 @@ export type { SessionMetadata, SessionData } from './session.js'
 export {
   getSystemContext,
   getUserContext,
-  getGitStatus,
   readProjectContextContent,
   discoverProjectContextFiles,
   clearContextCache,

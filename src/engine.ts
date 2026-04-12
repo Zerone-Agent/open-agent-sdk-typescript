@@ -80,18 +80,20 @@ interface ToolUseBlock {
 async function buildEnvironmentPrompt(config: QueryEngineConfig): Promise<string> {
   const parts: string[] = []
 
-  // List available tools with descriptions
-  parts.push('# Available Tools\n')
-  for (const tool of config.tools) {
-    parts.push(`- **${tool.name}**: ${tool.description}`)
-  }
-
   // Add agent definitions
   if (config.agents && Object.keys(config.agents).length > 0) {
     parts.push('\n# Available Subagents\n')
     for (const [name, def] of Object.entries(config.agents)) {
       parts.push(`- **${name}**: ${def.description}`)
     }
+  }
+
+  // Environment block (<env> XML with model identity, platform, date, etc.)
+  try {
+    const sysCtx = await getSystemContext(config.cwd, config.model)
+    if (sysCtx) parts.push(sysCtx)
+  } catch {
+    // Context is best-effort
   }
 
   // Add skills — verbose XML format builds a complete cognitive map for the model
@@ -102,18 +104,7 @@ async function buildEnvironmentPrompt(config: QueryEngineConfig): Promise<string
     parts.push(skillsXml)
   }
 
-  // System context (git status, etc.)
-  try {
-    const sysCtx = await getSystemContext(config.cwd)
-    if (sysCtx) {
-      parts.push('\n# Environment\n')
-      parts.push(sysCtx)
-    }
-  } catch {
-    // Context is best-effort
-  }
-
-  // User context (AGENT.md, date)
+  // User context (AGENT.md / project instructions)
   try {
     const userCtx = await getUserContext(config.cwd)
     if (userCtx) {
@@ -123,9 +114,6 @@ async function buildEnvironmentPrompt(config: QueryEngineConfig): Promise<string
   } catch {
     // Context is best-effort
   }
-
-  // Working directory
-  parts.push(`\n# Working Directory\n${config.cwd}`)
 
   // Load CLAUDE.md
   const claudeMdContent = await loadClaudeMd(config.cwd, config.settingSources)
