@@ -48,7 +48,7 @@ export async function getSystemContext(cwd: string, model?: string): Promise<str
   const lines: string[] = []
 
   if (model) {
-    lines.push(`You are powered by the model named ${model}. The exact model ID is openagent/${model}`)
+    lines.push(`You are powered by the model named ${model}.`)
   }
 
   lines.push('Here is some useful information about the environment you are running in:')
