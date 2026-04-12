@@ -16,8 +16,8 @@ async function main() {
 
   await mkdir(skillDir, { recursive: true })
 
-  // Setup: Create project-level AGENTS.md
-  await writeFile(join(testDir, 'AGENTS.md'), `# Project Instructions
+  // Setup: Create project-level CLAUDE.md
+  await writeFile(join(testDir, 'CLAUDE.md'), `# Project Instructions
 
 This is a test project for verifying filesystem skill loading.
 
