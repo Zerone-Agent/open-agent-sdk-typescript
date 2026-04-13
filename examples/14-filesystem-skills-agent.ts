@@ -48,7 +48,7 @@ Arguments: \${args}
     // Create agent with settingSources
     const agent = createAgent({
       cwd: testDir,
-      settingSources: ['project'],
+      settingSources: ['user', 'project'],
       maxTurns: 10,
       thinking: { type: 'enabled', budgetTokens: 8000 },
 
