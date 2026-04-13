@@ -10,6 +10,11 @@ export interface Frontmatter {
   model?: string
   allowedTools?: string[]
   userInvocable?: boolean
+  aliases?: string[]
+  whenToUse?: string
+  argumentHint?: string
+  context?: 'inline' | 'fork'
+  agent?: string
 }
 
 /**
@@ -91,19 +96,48 @@ function parseYamlFrontmatter(yaml: string): Frontmatter {
     }
   }
 
-  // Map to Frontmatter interface
+  // Map to Frontmatter interface (only known fields, ignore unknown ones)
   const frontmatter: Frontmatter = {
     description: result.description || '',
   }
 
+  // String fields
   if (result.name) frontmatter.name = String(result.name)
   if (result.model) frontmatter.model = String(result.model)
-  if (result['allowed-tools']) {
-    frontmatter.allowedTools = (result['allowed-tools'] as string[]).map(s => String(s))
-  }
+  if (result['when-to-use']) frontmatter.whenToUse = String(result['when-to-use'])
+  if (result['argument-hint']) frontmatter.argumentHint = String(result['argument-hint'])
+  if (result.context) frontmatter.context = String(result.context) as 'inline' | 'fork'
+  if (result.agent) frontmatter.agent = String(result.agent)
+
+  // Boolean fields
   if (result['user-invocable'] !== undefined) {
     frontmatter.userInvocable = Boolean(result['user-invocable'])
   }
 
+  // Array fields (support array, comma-separated string, or single string formats)
+  if (result['allowed-tools']) {
+    const val = result['allowed-tools']
+    frontmatter.allowedTools = parseStringArray(val)
+  }
+  if (result.aliases) {
+    const val = result.aliases
+    frontmatter.aliases = parseStringArray(val)
+  }
+
   return frontmatter
+}
+
+/**
+ * Parse a value that may be an array, comma-separated string, or single string.
+ */
+function parseStringArray(val: unknown): string[] {
+  if (Array.isArray(val)) {
+    return val.map(s => String(s))
+  }
+  const str = String(val)
+  // If contains comma, split by ", " (comma + space)
+  if (str.includes(', ')) {
+    return str.split(', ').map(s => s.trim()).filter(Boolean)
+  }
+  return [str]
 }

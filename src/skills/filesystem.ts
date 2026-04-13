@@ -110,6 +110,11 @@ async function loadSkillFile(
     model: frontmatter.model,
     allowedTools: frontmatter.allowedTools,
     userInvocable: frontmatter.userInvocable ?? true,
+    aliases: frontmatter.aliases,
+    whenToUse: frontmatter.whenToUse,
+    argumentHint: frontmatter.argumentHint,
+    context: frontmatter.context,
+    agent: frontmatter.agent,
     location: skillPath,
     skillDir,
     async getPrompt(args: string): Promise<SkillContentBlock[]> {
