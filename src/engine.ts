@@ -14,6 +14,7 @@
 
 import type {
   SDKMessage,
+  SDKSubagentMessage,
   QueryEngineConfig,
   ToolDefinition,
   ToolResult,
@@ -503,8 +504,55 @@ export class QueryEngine {
       // Reset max_output recovery counter on successful tool use
       maxOutputRecoveryAttempts = 0
 
-      // Execute tools (concurrent read-only, serial mutations)
-      const toolResults = await this.executeTools(toolUseBlocks)
+      // Real-time subagent event streaming via async queue
+      const pendingSubagentEvents: SDKSubagentMessage[] = []
+      let eventNotifier: (() => void) | null = null
+      let toolsDone = false
+
+      const enqueueSubagentEvent = (event: SDKSubagentMessage) => {
+        pendingSubagentEvents.push(event)
+        eventNotifier?.()
+        eventNotifier = null
+      }
+
+      const waitForEventOrDone = (): Promise<void> =>
+        new Promise((resolve) => {
+          if (pendingSubagentEvents.length > 0 || toolsDone) return resolve()
+          eventNotifier = resolve
+        })
+
+      let toolError: Error | null = null
+
+      const toolPromise = this.executeTools(toolUseBlocks, enqueueSubagentEvent)
+        .then((results) => {
+          toolsDone = true
+          eventNotifier?.()
+          eventNotifier = null
+          return results
+        })
+        .catch((err: Error) => {
+          toolError = err
+          toolsDone = true
+          eventNotifier?.()
+          eventNotifier = null
+          return [] as (ToolResult & { tool_name?: string })[]
+        })
+
+      // Yield subagent events as they arrive, in real-time
+      while (!toolsDone || pendingSubagentEvents.length > 0) {
+        if (pendingSubagentEvents.length > 0) {
+          yield pendingSubagentEvents.shift()!
+          continue
+        }
+        if (toolsDone) break
+        await waitForEventOrDone()
+      }
+
+      const toolResults = await toolPromise
+
+      if (toolError) {
+        throw toolError
+      }
 
       // Yield tool results
       for (const result of toolResults) {
@@ -573,15 +621,8 @@ export class QueryEngine {
    */
   private async executeTools(
     toolUseBlocks: ToolUseBlock[],
+    emitSubagentEvent?: (event: SDKSubagentMessage) => void,
   ): Promise<(ToolResult & { tool_name?: string })[]> {
-    const context: ToolContext = {
-      cwd: this.config.cwd,
-      abortSignal: this.config.abortSignal,
-      provider: this.provider,
-      model: this.config.model,
-      apiType: this.provider.apiType,
-    }
-
     const MAX_CONCURRENCY = parseInt(
       process.env.AGENT_SDK_MAX_TOOL_CONCURRENCY || '10',
     )
@@ -601,12 +642,30 @@ export class QueryEngine {
 
     const results: (ToolResult & { tool_name?: string })[] = []
 
+    const makeContext = (block: ToolUseBlock): ToolContext => ({
+      cwd: this.config.cwd,
+      abortSignal: this.config.abortSignal,
+      provider: this.provider,
+      model: this.config.model,
+      apiType: this.provider.apiType,
+      emitEvent: emitSubagentEvent
+        ? (event: SDKMessage) => {
+            if (event.type === 'subagent') {
+              emitSubagentEvent({
+                ...event,
+                parent_tool_use_id: block.id,
+              })
+            }
+          }
+        : undefined,
+    })
+
     // Execute read-only tools concurrently (batched by MAX_CONCURRENCY)
     for (let i = 0; i < readOnly.length; i += MAX_CONCURRENCY) {
       const batch = readOnly.slice(i, i + MAX_CONCURRENCY)
       const batchResults = await Promise.all(
         batch.map((item) =>
-          this.executeSingleTool(item.block, item.tool, context),
+          this.executeSingleTool(item.block, item.tool, makeContext(item.block)),
         ),
       )
       results.push(...batchResults)
@@ -614,7 +673,7 @@ export class QueryEngine {
 
     // Execute mutation tools sequentially
     for (const item of mutations) {
-      const result = await this.executeSingleTool(item.block, item.tool, context)
+      const result = await this.executeSingleTool(item.block, item.tool, makeContext(item.block))
       results.push(result)
     }
 

@@ -60,6 +60,7 @@ export type SDKMessage =
   | SDKStatusMessage
   | SDKTaskNotificationMessage
   | SDKRateLimitEvent
+  | SDKSubagentMessage
 
 export interface SDKAssistantMessage {
   type: 'assistant'
@@ -156,6 +157,17 @@ export interface SDKRateLimitEvent {
   message: string
 }
 
+/** Subagent streaming event — wraps a subagent's SDKMessage for the parent stream. */
+export interface SDKSubagentMessage {
+  type: 'subagent'
+  /** The tool_use_id of the parent Agent tool call that spawned this subagent */
+  parent_tool_use_id: string
+  /** The subagent's session ID */
+  session_id?: string
+  /** The subagent event (assistant, partial_message, tool_result, etc.) */
+  event: SDKAssistantMessage | SDKToolResultMessage | SDKPartialMessage | SDKSystemMessage
+}
+
 // --------------------------------------------------------------------------
 // Token Usage
 // --------------------------------------------------------------------------
@@ -197,6 +209,11 @@ export interface ToolContext {
   model?: string
   /** Parent agent's API type */
   apiType?: import('./providers/types.js').ApiType
+  /**
+   * Emit an event to the parent agent's streaming output.
+   * Used by tools like AgentTool to propagate subagent events.
+   */
+  emitEvent?: (event: SDKMessage) => void
 }
 
 export interface ToolResult {

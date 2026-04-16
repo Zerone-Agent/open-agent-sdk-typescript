@@ -376,6 +376,7 @@ export type {
   SDKToolResultMessage,
   SDKResultMessage,
   SDKPartialMessage,
+  SDKSubagentMessage,
 
   // Tool types
   ToolDefinition,

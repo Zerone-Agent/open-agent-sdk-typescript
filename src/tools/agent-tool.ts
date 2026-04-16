@@ -3,9 +3,10 @@
  *
  * Supports built-in agents (Explore, Plan) and custom agent definitions.
  * Agents run as nested query loops with their own context and tool sets.
+ * Subagent events are propagated to the parent stream via context.emitEvent.
  */
 
-import type { ToolDefinition, ToolContext, ToolResult, AgentDefinition } from '../types.js'
+import type { ToolDefinition, ToolContext, ToolResult, AgentDefinition, SDKMessage } from '../types.js'
 import { QueryEngine } from '../engine.js'
 import { getAllBaseTools, filterTools } from './index.js'
 import { createProvider, type ApiType } from '../providers/index.js'
@@ -85,23 +86,18 @@ export const AgentTool: ToolDefinition = {
   async call(input: any, context: ToolContext): Promise<ToolResult> {
     const agentType = input.subagent_type || 'general-purpose'
 
-    // Find agent definition
     const agentDef = registeredAgents[agentType] || BUILTIN_AGENTS[agentType]
 
-    // Determine tools for subagent
     let tools = getAllBaseTools()
     if (agentDef?.tools) {
       tools = filterTools(tools, agentDef.tools)
     }
 
-    // Remove AgentTool from subagent to prevent infinite recursion
     tools = tools.filter(t => t.name !== 'Agent')
 
-    // Build system prompt
     const systemPrompt = agentDef?.prompt ||
       'You are a helpful assistant. Complete the given task using the available tools.'
 
-    // Inherit provider and model from parent agent context, fall back to env vars
     const subModel = input.model || context.model || process.env.CODEANY_MODEL || 'claude-sonnet-4-6'
     const provider = context.provider ?? createProvider(
       (context.apiType || process.env.CODEANY_API_TYPE as ApiType) || 'anthropic-messages',
@@ -111,7 +107,8 @@ export const AgentTool: ToolDefinition = {
       },
     )
 
-    // Create subagent engine
+    const subSessionId = crypto.randomUUID()
+
     const engine = new QueryEngine({
       cwd: context.cwd,
       model: subModel,
@@ -121,10 +118,11 @@ export const AgentTool: ToolDefinition = {
       maxTurns: agentDef?.maxTurns || 10,
       maxTokens: 16384,
       canUseTool: async () => ({ behavior: 'allow' }),
-      includePartialMessages: false,
+      includePartialMessages: true,
+      sessionId: subSessionId,
     })
 
-    // Run the subagent
+    const emitEvent = context.emitEvent
     let resultText = ''
     let toolCalls: string[] = []
 
@@ -138,6 +136,18 @@ export const AgentTool: ToolDefinition = {
             if ('name' in block) {
               toolCalls.push(block.name as string)
             }
+          }
+        }
+
+        if (emitEvent) {
+          const propagatedTypes = ['assistant', 'partial_message', 'tool_result', 'system']
+          if (propagatedTypes.includes(event.type)) {
+            emitEvent({
+              type: 'subagent',
+              parent_tool_use_id: '',
+              session_id: subSessionId,
+              event: event as any,
+            })
           }
         }
       }
