@@ -346,6 +346,27 @@ export {
 } from './tools/cron-tools.js'
 export type { CronJob } from './tools/cron-tools.js'
 
+// --------------------------------------------------------------------------
+// Cron Utilities
+// --------------------------------------------------------------------------
+
+export {
+  cronToHuman,
+  computeNextCronRun,
+  parseCronExpression,
+  DEFAULT_CRON_JITTER_CONFIG,
+  isRecurringTaskAged,
+  jitteredNextCronRunMs,
+  jitterFrac,
+  oneShotJitteredNextCronRunMs,
+} from './cron/index.js'
+export type {
+  CronFields,
+  CronJitterConfig,
+  CronTask,
+  CronStorage,
+} from './cron/index.js'
+
 export {
   getConfig,
   setConfig,
