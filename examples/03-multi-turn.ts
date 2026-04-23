@@ -12,7 +12,7 @@ async function main() {
   console.log('--- Example 3: Multi-Turn Conversation ---\n')
 
   const agent = createAgent({
-    model: process.env.CODEANY_MODEL || 'claude-sonnet-4-6',
+    model: process.env.OPENAGENT_MODEL || 'claude-sonnet-4-6',
     maxTurns: 5,
   })
 

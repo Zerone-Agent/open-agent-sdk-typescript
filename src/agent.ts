@@ -68,7 +68,7 @@ export class Agent {
 
     // Merge credentials from options.env map, direct options, and process.env
     this.apiCredentials = this.pickCredentials()
-    this.modelId = this.cfg.model ?? this.readEnv('CODEANY_MODEL') ?? 'claude-sonnet-4-6'
+    this.modelId = this.cfg.model ?? this.readEnv('OPENAGENT_MODEL') ?? 'claude-sonnet-4-6'
     this.sid = this.cfg.sessionId ?? crypto.randomUUID()
 
     // Resolve API type
@@ -121,8 +121,8 @@ export class Agent {
 
     // Env var
     const envType =
-      this.cfg.env?.CODEANY_API_TYPE ??
-      this.readEnv('CODEANY_API_TYPE')
+      this.cfg.env?.OPENAGENT_API_TYPE ??
+      this.readEnv('OPENAGENT_API_TYPE')
     if (envType === 'openai-completions' || envType === 'anthropic-messages') {
       return envType
     }
@@ -147,20 +147,20 @@ export class Agent {
     return 'anthropic-messages'
   }
 
-  /** Pick API key and base URL from options or CODEANY_* env vars. */
+  /** Pick API key and base URL from options or OPENAGENT_* env vars. */
   private pickCredentials(): { key?: string; baseUrl?: string } {
     const envMap = this.cfg.env
     return {
       key:
         this.cfg.apiKey ??
-        envMap?.CODEANY_API_KEY ??
-        envMap?.CODEANY_AUTH_TOKEN ??
-        this.readEnv('CODEANY_API_KEY') ??
-        this.readEnv('CODEANY_AUTH_TOKEN'),
+        envMap?.OPENAGENT_API_KEY ??
+        envMap?.OPENAGENT_AUTH_TOKEN ??
+        this.readEnv('OPENAGENT_API_KEY') ??
+        this.readEnv('OPENAGENT_AUTH_TOKEN'),
       baseUrl:
         this.cfg.baseURL ??
-        envMap?.CODEANY_BASE_URL ??
-        this.readEnv('CODEANY_BASE_URL'),
+        envMap?.OPENAGENT_BASE_URL ??
+        this.readEnv('OPENAGENT_BASE_URL'),
     }
   }
 

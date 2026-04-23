@@ -11,7 +11,7 @@ async function main() {
   console.log('--- Example 16: Streaming with Tool Calls ---\n')
 
   const agent = createAgent({
-    model: process.env.CODEANY_MODEL || 'claude-sonnet-4-6',
+    model: process.env.OPENAGENT_MODEL || 'claude-sonnet-4-6',
     maxTurns: 10,
     includePartialMessages: true,
     thinking: { type: 'enabled', budgetTokens: 2000 },

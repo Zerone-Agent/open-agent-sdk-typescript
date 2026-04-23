@@ -11,7 +11,7 @@ async function main() {
   console.log('--- Example 5: Custom System Prompt ---\n')
 
   const agent = createAgent({
-    model: process.env.CODEANY_MODEL || 'claude-sonnet-4-6',
+    model: process.env.OPENAGENT_MODEL || 'claude-sonnet-4-6',
     maxTurns: 5,
     systemPrompt:
       'You are a senior code reviewer. When asked to review code, focus on: ' +

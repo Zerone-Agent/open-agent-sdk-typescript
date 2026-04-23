@@ -59,7 +59,7 @@ async function main() {
   console.log('\n--- Using skills with an agent ---\n')
 
   const agent = createAgent({
-    model: process.env.CODEANY_MODEL || 'claude-sonnet-4-6',
+    model: process.env.OPENAGENT_MODEL || 'claude-sonnet-4-6',
     maxTurns: 5,
   })
 

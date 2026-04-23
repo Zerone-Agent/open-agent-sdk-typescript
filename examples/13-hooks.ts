@@ -56,7 +56,7 @@ async function main() {
   // Note: For direct HookRegistry usage, we pass hooks via the engine config.
   // The AgentOptions.hooks format also works (see below).
   const agent = createAgent({
-    model: process.env.CODEANY_MODEL || 'claude-sonnet-4-6',
+    model: process.env.OPENAGENT_MODEL || 'claude-sonnet-4-6',
     maxTurns: 5,
     // Alternative: use AgentOptions.hooks format
     hooks: {

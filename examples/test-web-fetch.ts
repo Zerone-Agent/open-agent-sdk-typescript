@@ -30,14 +30,14 @@ async function testDirectCall() {
 async function testLLMCall() {
   console.log('--- Test 2: LLM Call ---\n')
 
-  const apiKey = process.env.CODEANY_API_KEY || process.env.CODEANY_AUTH_TOKEN
+  const apiKey = process.env.OPENAGENT_API_KEY || process.env.OPENAGENT_AUTH_TOKEN
   if (!apiKey) {
-    console.log('⚠️  SKIP: No CODEANY_API_KEY set, skipping LLM test\n')
+    console.log('⚠️  SKIP: No OPENAGENT_API_KEY set, skipping LLM test\n')
     return true
   }
 
   const agent = createAgent({
-    model: process.env.CODEANY_MODEL || 'claude-sonnet-4-6',
+    model: process.env.OPENAGENT_MODEL || 'claude-sonnet-4-6',
     maxTurns: 5,
   })
 

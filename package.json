@@ -1,18 +1,18 @@
 {
-  "name": "@codeany/open-agent-sdk",
+  "name": "@zerone/open-agent-sdk",
   "author": {
-    "name": "CodeAny",
-    "url": "https://codeany.ai"
+    "name": "Zerone",
+    "url": "https://github.com/Zerone-Agent"
   },
-  "homepage": "https://github.com/codeany-ai/open-agent-sdk-typescript",
+  "homepage": "https://github.com/Zerone-Agent/open-agent-sdk",
   "repository": {
     "type": "git",
-    "url": "https://github.com/codeany-ai/open-agent-sdk-typescript.git"
+    "url": "https://github.com/Zerone-Agent/open-agent-sdk.git"
   },
   "bugs": {
-    "url": "https://github.com/codeany-ai/open-agent-sdk-typescript/issues"
+    "url": "https://github.com/Zerone-Agent/open-agent-sdk/issues"
   },
-  "version": "0.2.2",
+  "version": "0.1.0",
   "description": "Open-source Agent SDK. Runs the full agent loop in-process — no local CLI required. Deploy anywhere: cloud, serverless, Docker, CI/CD.",
   "type": "module",
   "main": "./dist/index.js",
@@ -49,7 +49,7 @@
   },
   "keywords": [
     "open-agent-sdk",
-    "codeany",
+    "zerone",
     "agent",
     "sdk",
     "ai",

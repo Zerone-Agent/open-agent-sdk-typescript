@@ -1,23 +1,23 @@
 # Open Agent SDK (TypeScript)
 
-[![npm version](https://img.shields.io/npm/v/@codeany/open-agent-sdk)](https://www.npmjs.com/package/@codeany/open-agent-sdk)
+[![npm version](https://img.shields.io/npm/v/@zerone/open-agent-sdk)](https://www.npmjs.com/package/@zerone/open-agent-sdk)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 Open-source Agent SDK that runs the full agent loop **in-process** — no subprocess or CLI required. Supports both **Anthropic** and **OpenAI-compatible** APIs. Deploy anywhere: cloud, serverless, Docker, CI/CD.
 
-Also available in **Go**: [open-agent-sdk-go](https://github.com/codeany-ai/open-agent-sdk-go)
+Also available in **Go**: [open-agent-sdk-go](https://github.com/Zerone-Agent/open-agent-sdk-go)
 
 ## Get started
 
 ```bash
-npm install @codeany/open-agent-sdk
+npm install @zerone/open-agent-sdk
 ```
 
 Set your API key:
 
 ```bash
-export CODEANY_API_KEY=your-api-key
+export OPENAGENT_API_KEY=your-api-key
 ```
 
 ### OpenAI-compatible models
@@ -25,18 +25,18 @@ export CODEANY_API_KEY=your-api-key
 Works with OpenAI, DeepSeek, Qwen, Mistral, or any OpenAI-compatible endpoint:
 
 ```bash
-export CODEANY_API_TYPE=openai-completions
-export CODEANY_API_KEY=sk-...
-export CODEANY_BASE_URL=https://api.openai.com/v1
-export CODEANY_MODEL=gpt-4o
+export OPENAGENT_API_TYPE=openai-completions
+export OPENAGENT_API_KEY=sk-...
+export OPENAGENT_BASE_URL=https://api.openai.com/v1
+export OPENAGENT_MODEL=gpt-4o
 ```
 
 ### Third-party Anthropic-compatible providers
 
 ```bash
-export CODEANY_BASE_URL=https://openrouter.ai/api
-export CODEANY_API_KEY=sk-or-...
-export CODEANY_MODEL=anthropic/claude-sonnet-4
+export OPENAGENT_BASE_URL=https://openrouter.ai/api
+export OPENAGENT_API_KEY=sk-or-...
+export OPENAGENT_MODEL=anthropic/claude-sonnet-4
 ```
 
 ## Quick start
@@ -44,7 +44,7 @@ export CODEANY_MODEL=anthropic/claude-sonnet-4
 ### One-shot query (streaming)
 
 ```typescript
-import { query } from "@codeany/open-agent-sdk";
+import { query } from "@zerone/open-agent-sdk";
 
 for await (const message of query({
   prompt: "Read package.json and tell me the project name.",
@@ -64,7 +64,7 @@ for await (const message of query({
 ### Simple blocking prompt
 
 ```typescript
-import { createAgent } from "@codeany/open-agent-sdk";
+import { createAgent } from "@zerone/open-agent-sdk";
 
 const agent = createAgent({ model: "claude-sonnet-4-6" });
 const result = await agent.prompt("What files are in this project?");
@@ -78,7 +78,7 @@ console.log(
 ### OpenAI / GPT models
 
 ```typescript
-import { createAgent } from "@codeany/open-agent-sdk";
+import { createAgent } from "@zerone/open-agent-sdk";
 
 const agent = createAgent({
   apiType: "openai-completions",
@@ -96,7 +96,7 @@ The `apiType` is auto-detected from model name — models containing `gpt-`, `o1
 ### Multi-turn conversation
 
 ```typescript
-import { createAgent } from "@codeany/open-agent-sdk";
+import { createAgent } from "@zerone/open-agent-sdk";
 
 const agent = createAgent({ maxTurns: 5 });
 
@@ -115,7 +115,7 @@ console.log(`Session messages: ${agent.getMessages().length}`);
 
 ```typescript
 import { z } from "zod";
-import { query, tool, createSdkMcpServer } from "@codeany/open-agent-sdk";
+import { query, tool, createSdkMcpServer } from "@zerone/open-agent-sdk";
 
 const getWeather = tool(
   "get_weather",
@@ -144,7 +144,7 @@ import {
   createAgent,
   getAllBaseTools,
   defineTool,
-} from "@codeany/open-agent-sdk";
+} from "@zerone/open-agent-sdk";
 
 const calculator = defineTool({
   name: "Calculator",
@@ -177,7 +177,7 @@ import {
   createAgent,
   registerSkill,
   getAllSkills,
-} from "@codeany/open-agent-sdk";
+} from "@zerone/open-agent-sdk";
 
 // Register a custom skill
 registerSkill({
@@ -221,7 +221,7 @@ Analyze the codebase structure and provide recommendations.
 Load in your application:
 
 ```typescript
-import { createAgent } from "@codeany/open-agent-sdk";
+import { createAgent } from "@zerone/open-agent-sdk";
 
 const agent = createAgent({
   cwd: "/path/to/project",
@@ -243,7 +243,7 @@ const agent = createAgent({
 ### Hooks (lifecycle events)
 
 ```typescript
-import { createAgent, createHookRegistry } from "@codeany/open-agent-sdk";
+import { createAgent, createHookRegistry } from "@zerone/open-agent-sdk";
 
 const hooks = createHookRegistry({
   PreToolUse: [
@@ -269,7 +269,7 @@ const hooks = createHookRegistry({
 ### MCP server integration
 
 ```typescript
-import { createAgent } from "@codeany/open-agent-sdk";
+import { createAgent } from "@zerone/open-agent-sdk";
 
 const agent = createAgent({
   mcpServers: {
@@ -288,7 +288,7 @@ await agent.close();
 ### Subagents
 
 ```typescript
-import { query } from "@codeany/open-agent-sdk";
+import { query } from "@zerone/open-agent-sdk";
 
 for await (const msg of query({
   prompt: "Use the code-reviewer agent to review src/index.ts",
@@ -309,7 +309,7 @@ for await (const msg of query({
 ### Permissions
 
 ```typescript
-import { query } from "@codeany/open-agent-sdk";
+import { query } from "@zerone/open-agent-sdk";
 
 // Read-only agent — can only analyze, not modify
 for await (const msg of query({
@@ -371,7 +371,7 @@ npx tsx examples/web/server.ts
 | -------------------- | --------------------------------------- | ---------------------- | -------------------------------------------------------------------- |
 | `apiType`            | `string`                                | auto-detected          | `'anthropic-messages'` or `'openai-completions'`                     |
 | `model`              | `string`                                | `claude-sonnet-4-6`    | LLM model ID                                                         |
-| `apiKey`             | `string`                                | `CODEANY_API_KEY`      | API key                                                              |
+| `apiKey`             | `string`                                | `OPENAGENT_API_KEY`      | API key                                                              |
 | `baseURL`            | `string`                                | —                      | Custom API endpoint                                                  |
 | `cwd`                | `string`                                | `process.cwd()`        | Working directory                                                    |
 | `systemPrompt`       | `string`                                | —                      | System prompt override                                               |
@@ -402,11 +402,11 @@ npx tsx examples/web/server.ts
 
 | Variable             | Description                                              |
 | -------------------- | -------------------------------------------------------- |
-| `CODEANY_API_KEY`    | API key (required)                                       |
-| `CODEANY_API_TYPE`   | `anthropic-messages` (default) or `openai-completions`   |
-| `CODEANY_MODEL`      | Default model override                                   |
-| `CODEANY_BASE_URL`   | Custom API endpoint                                      |
-| `CODEANY_AUTH_TOKEN` | Alternative auth token                                   |
+| `OPENAGENT_API_KEY`    | API key (required)                                       |
+| `OPENAGENT_API_TYPE`   | `anthropic-messages` (default) or `openai-completions`   |
+| `OPENAGENT_MODEL`      | Default model override                                   |
+| `OPENAGENT_BASE_URL`   | Custom API endpoint                                      |
+| `OPENAGENT_AUTH_TOKEN` | Alternative auth token                                   |
 
 ## Built-in tools
 
@@ -455,7 +455,7 @@ Register custom skills with `registerSkill()`.
 ┌──────────────────────────────────────────────────────┐
 │                   Your Application                    │
 │                                                       │
-│   import { createAgent } from '@codeany/open-agent-sdk' │
+│   import { createAgent } from '@zerone/open-agent-sdk' │
 └────────────────────────┬─────────────────────────────┘
                          │
               ┌──────────▼──────────┐
@@ -526,16 +526,6 @@ Start the web UI:
 ```bash
 npx tsx examples/web/server.ts
 ```
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=codeany-ai%2Fopen-agent-sdk-typescript&type=timeline&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=codeany-ai/open-agent-sdk-typescript&type=timeline&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=codeany-ai/open-agent-sdk-typescript&type=timeline&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=codeany-ai/open-agent-sdk-typescript&type=timeline&legend=top-left" />
- </picture>
-</a>
 
 ## License
 

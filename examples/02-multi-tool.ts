@@ -12,7 +12,7 @@ async function main() {
   console.log('--- Example 2: Multi-Tool Orchestration ---\n')
 
   const agent = createAgent({
-    model: process.env.CODEANY_MODEL || 'claude-sonnet-4-6',
+    model: process.env.OPENAGENT_MODEL || 'claude-sonnet-4-6',
     maxTurns: 15,
   })
 

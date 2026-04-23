@@ -12,7 +12,7 @@ async function main() {
 
   // Test 1: default preset (minimal)
   const agent1 = createAgent({
-    model: process.env.CODEANY_MODEL || 'claude-sonnet-4-6',
+    model: process.env.OPENAGENT_MODEL || 'claude-sonnet-4-6',
     maxTurns: 1,
     systemPrompt: { type: 'preset', preset: 'default' },
   })
@@ -22,7 +22,7 @@ async function main() {
 
   // Test 2: claude_code preset (full)
   const agent2 = createAgent({
-    model: process.env.CODEANY_MODEL || 'claude-sonnet-4-6',
+    model: process.env.OPENAGENT_MODEL || 'claude-sonnet-4-6',
     maxTurns: 1,
     systemPrompt: { type: 'preset', preset: 'claude_code' },
   })
@@ -32,7 +32,7 @@ async function main() {
 
   // Test 3: custom prompt
   const agent3 = createAgent({
-    model: process.env.CODEANY_MODEL || 'claude-sonnet-4-6',
+    model: process.env.OPENAGENT_MODEL || 'claude-sonnet-4-6',
     maxTurns: 1,
     systemPrompt: 'You are a pirate. Speak like a pirate.',
   })
@@ -42,7 +42,7 @@ async function main() {
 
   // Test 4: with append
   const agent4 = createAgent({
-    model: process.env.CODEANY_MODEL || 'claude-sonnet-4-6',
+    model: process.env.OPENAGENT_MODEL || 'claude-sonnet-4-6',
     maxTurns: 1,
     systemPrompt: {
       type: 'preset',

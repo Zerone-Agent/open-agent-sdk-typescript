@@ -23,7 +23,7 @@ let agent: Agent | null = null
 function getOrCreateAgent(): Agent {
   if (!agent) {
     agent = createAgent({
-      model: process.env.CODEANY_MODEL || 'claude-sonnet-4-6',
+      model: process.env.OPENAGENT_MODEL || 'claude-sonnet-4-6',
       maxTurns: 20,
     })
   }
