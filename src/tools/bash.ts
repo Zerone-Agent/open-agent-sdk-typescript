@@ -1,9 +1,55 @@
 /**
  * BashTool - Execute shell commands
+ * Supports Windows (PowerShell > Git Bash > cmd) and Unix (bash)
  */
 
-import { spawn } from 'child_process'
+import crossSpawn from 'cross-spawn'
 import { defineTool } from './types.js'
+
+function getShellConfig(): { shell: string; args: string[] } {
+  if (process.platform !== 'win32') {
+    return { shell: 'bash', args: ['-c'] }
+  }
+
+  // Windows: try PowerShell first, then Git Bash, then cmd
+  // PowerShell Core (pwsh) or Windows PowerShell (powershell)
+  const psPaths = ['pwsh.exe', 'powershell.exe']
+  for (const ps of psPaths) {
+    try {
+      // Check if PowerShell is available
+      const result = crossSpawn.sync(ps, ['-Command', 'exit 0'], { stdio: 'ignore' })
+      if (result.status === 0) {
+        return { shell: ps, args: ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command'] }
+      }
+    } catch {
+      // Continue to next option
+    }
+  }
+
+  // Try Git Bash via git.exe path
+  try {
+    const gitResult = crossSpawn.sync('git', ['--exec-path'], { encoding: 'utf-8' })
+    if (gitResult.status === 0 && gitResult.stdout) {
+      const gitPath = gitResult.stdout.trim()
+      const gitBashPath = gitPath.replace(/\/libexec\/git-core$/, '/bin/bash.exe').replace(/\\libexec\\git-core$/, '\\bin\\bash.exe')
+      if (gitBashPath !== gitPath) {
+        try {
+          const bashResult = crossSpawn.sync(gitBashPath, ['-c', 'exit 0'], { stdio: 'ignore' })
+          if (bashResult.status === 0) {
+            return { shell: gitBashPath, args: ['-c'] }
+          }
+        } catch {
+          // Continue to fallback
+        }
+      }
+    }
+  } catch {
+    // Continue to fallback
+  }
+
+  // Fallback to cmd.exe
+  return { shell: 'cmd.exe', args: ['/c'] }
+}
 
 export const BashTool = defineTool({
   name: 'Bash',
@@ -27,16 +73,18 @@ export const BashTool = defineTool({
   async call(input, context) {
     const { command, timeout: userTimeout } = input
     const timeoutMs = Math.min(userTimeout || 120000, 600000)
+    const { shell, args } = getShellConfig()
 
     return new Promise<string>((resolve) => {
       const chunks: Buffer[] = []
       const errChunks: Buffer[] = []
 
-      const proc = spawn('bash', ['-c', command], {
+      const proc = crossSpawn(shell, [...args, command], {
         cwd: context.cwd,
         env: { ...process.env },
         timeout: timeoutMs,
         stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true,
       })
 
       proc.stdout?.on('data', (data: Buffer) => chunks.push(data))

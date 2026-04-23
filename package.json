@@ -12,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/codeany-ai/open-agent-sdk-typescript/issues"
   },
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Open-source Agent SDK. Runs the full agent loop in-process — no local CLI required. Deploy anywhere: cloud, serverless, Docker, CI/CD.",
   "type": "module",
   "main": "./dist/index.js",
@@ -36,10 +36,12 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
     "@modelcontextprotocol/sdk": "^1.12.1",
+    "cross-spawn": "^7.0.6",
     "zod": "^3.23.0",
     "zod-to-json-schema": "^3.24.0"
   },
   "devDependencies": {
+    "@types/cross-spawn": "^6.0.6",
     "@types/node": "^22.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
