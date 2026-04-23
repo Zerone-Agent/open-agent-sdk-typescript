@@ -6,6 +6,7 @@ export interface CronTask {
   lastFiredAt?: number
   recurring: boolean
   permanent?: boolean
+  agentId?: string
 }
 
 export interface CronJitterConfig {
