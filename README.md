@@ -1,6 +1,6 @@
 # Open Agent SDK (TypeScript)
 
-[![npm version](https://img.shields.io/npm/v/@zerone/open-agent-sdk)](https://www.npmjs.com/package/@zerone/open-agent-sdk)
+[![npm version](https://img.shields.io/npm/v/@zerone-agent/open-agent-sdk)](https://www.npmjs.com/package/@zerone-agent/open-agent-sdk)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
@@ -11,7 +11,7 @@ Also available in **Go**: [open-agent-sdk-go](https://github.com/Zerone-Agent/op
 ## Get started
 
 ```bash
-npm install @zerone/open-agent-sdk
+npm install @zerone-agent/open-agent-sdk
 ```
 
 Set your API key:
@@ -44,7 +44,7 @@ export OPENAGENT_MODEL=anthropic/claude-sonnet-4
 ### One-shot query (streaming)
 
 ```typescript
-import { query } from "@zerone/open-agent-sdk";
+import { query } from "@zerone-agent/open-agent-sdk";
 
 for await (const message of query({
   prompt: "Read package.json and tell me the project name.",
@@ -64,7 +64,7 @@ for await (const message of query({
 ### Simple blocking prompt
 
 ```typescript
-import { createAgent } from "@zerone/open-agent-sdk";
+import { createAgent } from "@zerone-agent/open-agent-sdk";
 
 const agent = createAgent({ model: "claude-sonnet-4-6" });
 const result = await agent.prompt("What files are in this project?");
@@ -78,7 +78,7 @@ console.log(
 ### OpenAI / GPT models
 
 ```typescript
-import { createAgent } from "@zerone/open-agent-sdk";
+import { createAgent } from "@zerone-agent/open-agent-sdk";
 
 const agent = createAgent({
   apiType: "openai-completions",
@@ -96,7 +96,7 @@ The `apiType` is auto-detected from model name — models containing `gpt-`, `o1
 ### Multi-turn conversation
 
 ```typescript
-import { createAgent } from "@zerone/open-agent-sdk";
+import { createAgent } from "@zerone-agent/open-agent-sdk";
 
 const agent = createAgent({ maxTurns: 5 });
 
@@ -115,7 +115,7 @@ console.log(`Session messages: ${agent.getMessages().length}`);
 
 ```typescript
 import { z } from "zod";
-import { query, tool, createSdkMcpServer } from "@zerone/open-agent-sdk";
+import { query, tool, createSdkMcpServer } from "@zerone-agent/open-agent-sdk";
 
 const getWeather = tool(
   "get_weather",
@@ -144,7 +144,7 @@ import {
   createAgent,
   getAllBaseTools,
   defineTool,
-} from "@zerone/open-agent-sdk";
+} from "@zerone-agent/open-agent-sdk";
 
 const calculator = defineTool({
   name: "Calculator",
@@ -177,7 +177,7 @@ import {
   createAgent,
   registerSkill,
   getAllSkills,
-} from "@zerone/open-agent-sdk";
+} from "@zerone-agent/open-agent-sdk";
 
 // Register a custom skill
 registerSkill({
@@ -221,7 +221,7 @@ Analyze the codebase structure and provide recommendations.
 Load in your application:
 
 ```typescript
-import { createAgent } from "@zerone/open-agent-sdk";
+import { createAgent } from "@zerone-agent/open-agent-sdk";
 
 const agent = createAgent({
   cwd: "/path/to/project",
@@ -243,7 +243,7 @@ const agent = createAgent({
 ### Hooks (lifecycle events)
 
 ```typescript
-import { createAgent, createHookRegistry } from "@zerone/open-agent-sdk";
+import { createAgent, createHookRegistry } from "@zerone-agent/open-agent-sdk";
 
 const hooks = createHookRegistry({
   PreToolUse: [
@@ -269,7 +269,7 @@ const hooks = createHookRegistry({
 ### MCP server integration
 
 ```typescript
-import { createAgent } from "@zerone/open-agent-sdk";
+import { createAgent } from "@zerone-agent/open-agent-sdk";
 
 const agent = createAgent({
   mcpServers: {
@@ -288,7 +288,7 @@ await agent.close();
 ### Subagents
 
 ```typescript
-import { query } from "@zerone/open-agent-sdk";
+import { query } from "@zerone-agent/open-agent-sdk";
 
 for await (const msg of query({
   prompt: "Use the code-reviewer agent to review src/index.ts",
@@ -309,7 +309,7 @@ for await (const msg of query({
 ### Permissions
 
 ```typescript
-import { query } from "@zerone/open-agent-sdk";
+import { query } from "@zerone-agent/open-agent-sdk";
 
 // Read-only agent — can only analyze, not modify
 for await (const msg of query({
@@ -455,7 +455,7 @@ Register custom skills with `registerSkill()`.
 ┌──────────────────────────────────────────────────────┐
 │                   Your Application                    │
 │                                                       │
-│   import { createAgent } from '@zerone/open-agent-sdk' │
+│   import { createAgent } from '@zerone-agent/open-agent-sdk' │
 └────────────────────────┬─────────────────────────────┘
                          │
               ┌──────────▼──────────┐

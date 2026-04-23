@@ -1,5 +1,5 @@
 /**
- * @zerone/open-agent-sdk
+ * @zerone-agent/open-agent-sdk
  *
  * Open-source Agent SDK by Zerone.
  * Runs the full agent loop in-process without spawning subprocesses.
