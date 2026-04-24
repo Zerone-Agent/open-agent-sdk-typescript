@@ -27,11 +27,14 @@ export function parseSkillMarkdown(content: string): {
   frontmatter: Frontmatter
   body: string
 } {
+  // Normalize line endings to LF for consistent parsing
+  const normalized = content.replace(/\r\n/g, '\n').replace(/^\uFEFF/, '')
+
   // Match YAML frontmatter between --- delimiters
-  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
-  
+  const match = normalized.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
+
   if (!match) {
-    throw new Error('Invalid SKILL.md format: missing frontmatter')
+    throw new Error('Invalid SKILL.md format: missing frontmatter (expected --- at start)')
   }
 
   const frontmatterStr = match[1]
