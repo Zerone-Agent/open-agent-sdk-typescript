@@ -116,9 +116,9 @@ export const SkillTool: ToolDefinition = {
     'Load a specialized skill that provides domain-specific instructions and workflows.\n\n' +
     'When you recognize that a task matches one of the available skills listed below, ' +
     'use this tool to load the full skill instructions.\n\n' +
-    'The skill will inject detailed instructions, workflows, and access to bundled ' +
-    'resources (scripts, references, templates) into the conversation context.\n\n' +
-    'Tool output includes a `<skill_content name="...">` block with the loaded content.',
+     'The skill will inject detailed instructions, workflows, and access to specialized ' +
+     'resources (scripts, references, templates) into the conversation context.\n\n' +
+     'Tool output includes a `<skill_content name="...">` block with the loaded content.',
 
   inputSchema: {
     type: 'object',

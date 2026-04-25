@@ -37,7 +37,7 @@ import {
   loadSession,
 } from './session.js'
 import { createHookRegistry, type HookRegistry } from './hooks.js'
-import { initBundledSkills, loadSkillsFromFilesystem } from './skills/index.js'
+import { loadSkillsFromFilesystem } from './skills/index.js'
 import { createProvider, type LLMProvider, type ApiType } from './providers/index.js'
 import type { NormalizedMessageParam } from './providers/types.js'
 import { SYSTEM_PROMPTS } from './prompts/system-prompts.js'
@@ -79,9 +79,6 @@ export class Agent {
       apiKey: this.apiCredentials.key,
       baseURL: this.apiCredentials.baseUrl,
     })
-
-    // Initialize bundled skills
-    initBundledSkills()
 
     // Build hook registry from options
     this.hookRegistry = createHookRegistry()

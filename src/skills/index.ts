@@ -23,8 +23,5 @@ export {
   formatSkillsForToolDescription,
 } from './registry.js'
 
-// Bundled skills
-export { initBundledSkills } from './bundled/index.js'
-
 // Filesystem loading
 export { loadSkillsFromFilesystem } from './filesystem.js'

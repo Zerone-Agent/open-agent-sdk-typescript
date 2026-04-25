@@ -1,7 +1,7 @@
 /**
  * Example 12: Skills
  *
- * Shows how to use the skill system: bundled skills, custom skills,
+ * Shows how to use the skill system: registering custom skills,
  * and invoking skills programmatically.
  *
  * Run: npx tsx examples/12-skills.ts
@@ -12,23 +12,11 @@ import {
   getAllSkills,
   getUserInvocableSkills,
   getSkill,
-  initBundledSkills,
 } from '../src/index.js'
 import type { SkillContentBlock } from '../src/index.js'
 
 async function main() {
   console.log('--- Example 12: Skills ---\n')
-
-  // Bundled skills are auto-initialized when creating an Agent,
-  // but you can also init them explicitly:
-  initBundledSkills()
-
-  // List all registered skills
-  const all = getAllSkills()
-  console.log(`Registered skills (${all.length}):`)
-  for (const skill of all) {
-    console.log(`  - ${skill.name}: ${skill.description.slice(0, 80)}...`)
-  }
 
   // Register a custom skill
   registerSkill({
@@ -44,14 +32,20 @@ async function main() {
     },
   })
 
-  console.log(`\nAfter registering custom skill: ${getAllSkills().length} total`)
-  console.log(`User-invocable: ${getUserInvocableSkills().length}`)
+  // List all registered skills
+  const all = getAllSkills()
+  console.log(`Registered skills (${all.length}):`)
+  for (const skill of all) {
+    console.log(`  - ${skill.name}: ${skill.description.slice(0, 80)}...`)
+  }
+
+  console.log(`\nUser-invocable: ${getUserInvocableSkills().length}`)
 
   // Get a specific skill
-  const commitSkill = getSkill('commit')
-  if (commitSkill) {
-    const blocks = await commitSkill.getPrompt('', { cwd: process.cwd() })
-    console.log(`\nCommit skill prompt (first 200 chars):`)
+  const explainSkill = getSkill('explain')
+  if (explainSkill) {
+    const blocks = await explainSkill.getPrompt('git rebase', { cwd: process.cwd() })
+    console.log(`\nExplain skill prompt (first 200 chars):`)
     console.log(blocks[0]?.type === 'text' ? blocks[0].text.slice(0, 200) + '...' : '(non-text)')
   }
 

@@ -437,18 +437,6 @@ npx tsx examples/web/server.ts
 | **Config**                                 | Dynamic configuration                        |
 | **TodoWrite**                              | Session todo list                            |
 
-## Bundled skills
-
-| Skill        | Description                                                    |
-| ------------ | -------------------------------------------------------------- |
-| `simplify`   | Review changed code for reuse, quality, and efficiency         |
-| `commit`     | Create a git commit with a well-crafted message                |
-| `review`     | Review code changes for correctness, security, and performance |
-| `debug`      | Systematic debugging using structured investigation            |
-| `test`       | Run tests and analyze failures                                 |
-
-Register custom skills with `registerSkill()`.
-
 ## Architecture
 
 ```
