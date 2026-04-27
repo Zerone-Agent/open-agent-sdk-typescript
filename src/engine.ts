@@ -171,8 +171,12 @@ export class QueryEngine {
       }
 
       if (chunk.type === 'thinking') {
-        // Thinking is not part of NormalizedResponseBlock, skip for now
-        // Could be added to content if needed
+        if (!currentBlock || currentBlock.type !== 'thinking') {
+          currentBlock = { type: 'thinking', thinking: chunk.delta || '' }
+          content.push(currentBlock)
+        } else {
+          currentBlock.thinking += chunk.delta || ''
+        }
       }
 
       if (chunk.type === 'tool_use') {
@@ -358,8 +362,7 @@ export class QueryEngine {
             messages: apiMessages,
             tools: tools.length > 0 ? tools : undefined,
             thinking:
-              this.config.thinking?.type === 'enabled' &&
-                this.config.thinking.budgetTokens
+              this.config.thinking?.type === 'enabled'
                 ? {
                   type: 'enabled',
                   budget_tokens: this.config.thinking.budgetTokens,
@@ -402,8 +405,7 @@ export class QueryEngine {
                 messages: apiMessages,
                 tools: tools.length > 0 ? tools : undefined,
                 thinking:
-                  this.config.thinking?.type === 'enabled' &&
-                    this.config.thinking.budgetTokens
+                  this.config.thinking?.type === 'enabled'
                     ? {
                       type: 'enabled',
                       budget_tokens: this.config.thinking.budgetTokens,

@@ -60,6 +60,8 @@ async function* parseSSEStream(response: Response): AsyncGenerator<any> {
 interface OpenAIChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool'
   content?: string | null
+  reasoning_content?: string | null
+  reasoning?: string | null
   tool_calls?: OpenAIToolCall[]
   tool_call_id?: string
 }
@@ -89,6 +91,8 @@ interface OpenAIChatResponse {
     message: {
       role: 'assistant'
       content: string | null
+      reasoning_content?: string | null
+      reasoning?: string | null
       tool_calls?: OpenAIToolCall[]
     }
     finish_reason: 'stop' | 'length' | 'tool_calls' | 'content_filter' | string
@@ -127,6 +131,10 @@ export class OpenAIProvider implements LLMProvider {
 
     if (tools && tools.length > 0) {
       body.tools = tools
+    }
+
+    if (params.thinking?.type === 'enabled') {
+      body.chat_template_kwargs = { enable_thinking: true }
     }
 
     // Make API call
@@ -170,6 +178,10 @@ export class OpenAIProvider implements LLMProvider {
       body.tools = tools
     }
 
+    if (params.thinking?.type === 'enabled') {
+      body.chat_template_kwargs = { enable_thinking: true }
+    }
+
     const response = await fetch(`${this.baseURL}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -209,6 +221,16 @@ export class OpenAIProvider implements LLMProvider {
 
       const delta = choice.delta
       if (!delta) continue
+
+      // Reasoning/thinking content (DeepSeek-R1, Qwen-QWQ, vLLM Gemma, etc.)
+      const reasoningContent = delta.reasoning_content || delta.reasoning
+      if (reasoningContent) {
+        yield {
+          type: 'thinking',
+          index: currentBlockIndex,
+          delta: reasoningContent,
+        }
+      }
 
       // Text content
       if (delta.content) {
@@ -343,6 +365,8 @@ export class OpenAIProvider implements LLMProvider {
     for (const block of msg.content) {
       if (block.type === 'text') {
         textParts.push(block.text)
+      } else if (block.type === 'thinking') {
+        // Skip thinking blocks — OpenAI-compatible models don't need them in requests
       } else if (block.type === 'tool_use') {
         toolCalls.push({
           id: block.id,
@@ -399,6 +423,12 @@ export class OpenAIProvider implements LLMProvider {
     }
 
     const content: NormalizedResponseBlock[] = []
+
+    // Add thinking content (before text, matches streaming order)
+    const reasoningContent = choice.message.reasoning_content || choice.message.reasoning
+    if (reasoningContent) {
+      content.push({ type: 'thinking', thinking: reasoningContent })
+    }
 
     // Add text content
     if (choice.message.content) {

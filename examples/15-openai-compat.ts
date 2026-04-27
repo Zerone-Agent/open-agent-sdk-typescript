@@ -23,10 +23,14 @@ async function main() {
     apiKey: process.env.OPENAGENT_API_KEY,
     baseURL: process.env.OPENAGENT_BASE_URL || 'https://api.openai.com/v1',
     maxTurns: 5,
+    includePartialMessages: true,
+    thinking: { type: 'enabled' },
   })
 
   console.log(`API Type: ${agent.getApiType()}`)
   console.log(`Model: ${process.env.OPENAGENT_MODEL || 'gpt-4o'}\n`)
+
+  let lastType = ''
 
   // Option 2: Auto-detected from model name (uncomment to try)
   // const agent = createAgent({
@@ -48,13 +52,21 @@ async function main() {
   // OPENAGENT_BASE_URL=https://api.openai.com/v1
   // const agent = createAgent()
 
-  for await (const event of agent.query('What is 2+2? Reply in one sentence.')) {
+  for await (const event of agent.query('一个房间里有3个开关，分别控制隔壁房间的3盏灯。你只能进隔壁房间一次。如何确定每个开关对应哪盏灯？')) {
     const msg = event as any
+    if (msg.type === 'partial_message') {
+      if (msg.partial.type === 'thinking') {
+        if (lastType !== 'thinking') process.stdout.write('\x1b[90m[Thinking] ')
+        process.stdout.write(msg.partial.text)
+      }
+      if (msg.partial.type === 'text') {
+        if (lastType === 'thinking') process.stdout.write('\x1b[0m\n\n')
+        process.stdout.write(msg.partial.text)
+      }
+      lastType = msg.partial.type
+    }
     if (msg.type === 'assistant') {
       for (const block of msg.message?.content || []) {
-        if (block.type === 'text' && block.text.trim()) {
-          console.log(`Assistant: ${block.text}`)
-        }
         if (block.type === 'tool_use') {
           console.log(`[Tool: ${block.name}] ${JSON.stringify(block.input)}`)
         }
