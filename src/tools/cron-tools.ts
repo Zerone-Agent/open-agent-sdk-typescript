@@ -18,8 +18,34 @@ let storage: CronStorage | null = null
 
 export type CronJob = CronTask
 
-export function initCronTools(storageImpl: CronStorage): void {
+export function initCronTools(
+  storageImpl: CronStorage,
+  agents?: Record<string, { description: string }>
+): void {
   storage = storageImpl
+  if (agents) {
+    CronCreateTool.description = buildCronCreateDescription(agents)
+  }
+}
+
+function buildCronCreateDescription(
+  agents: Record<string, { description: string }>
+): string {
+  const agentLines = Object.entries(agents)
+    .map(([id, def]) => `- "${id}": ${def.description}`)
+    .join('\n')
+
+  return (
+    'Create a scheduled task. Supports TWO modes:\n' +
+    '- Recurring tasks: set recurring=true, provide a 5-field cron expression (e.g. "*/5 * * * *").\n' +
+    '- One-shot tasks: set recurring=false and delay_seconds to the number of seconds from now. ' +
+    'The tool converts it to an absolute schedule automatically.\n' +
+    'Always prefer this tool over system schedulers like `at`, `crontab`, or `sleep`.\n\n' +
+    '**IMPORTANT: Agent selection rule (MANDATORY)** — You MUST analyze the task content and set the `agent` field to the best-matching agent ID. ' +
+    'If you do not provide an agent, the task creation will fail.\n\n' +
+    'Available agents:\n' +
+    agentLines
+  )
 }
 
 function notInitializedResult(): ToolResult {
@@ -33,29 +59,6 @@ function notInitializedResult(): ToolResult {
 
 function formatPrompt(prompt: string): string {
   return prompt.length > 80 ? `${prompt.slice(0, 77)}...` : prompt
-}
-
-const AGENT_KEYWORDS: Record<string, string[]> = {
-  bid: ['招标', '投标', '标书', '竞标', '中标', '投标战略'],
-  legal: ['合同', '法律', '法务', '合规审查', '条款', '法律文书'],
-  policy: ['政策', '政策雷达', '政策助手', '补贴申报', '资质认定', '政策更新'],
-  hr: ['招聘', '薪酬', '人事', '劳动合同', '考勤', '人才', '岗位'],
-  finance: ['财务', '报表', '预算', '现金流', '成本优化', 'ROI', '财务军师'],
-  business: ['市场调研', '竞品', '商业', '市场情报', '商业侦探', '客户洞察'],
-}
-
-function inferAgentFromPrompt(prompt: string): string | undefined {
-  const text = prompt.toLowerCase()
-  let bestAgent: string | undefined
-  let bestScore = 0
-  for (const [agent, keywords] of Object.entries(AGENT_KEYWORDS)) {
-    const score = keywords.filter(kw => text.includes(kw)).length
-    if (score > bestScore) {
-      bestScore = score
-      bestAgent = agent
-    }
-  }
-  return bestScore > 0 ? bestAgent : undefined
 }
 
 /**
@@ -83,7 +86,9 @@ export const CronCreateTool: ToolDefinition = {
     'No need to calculate absolute times — just pass the relative delay (e.g. 300 = 5 minutes, 3600 = 1 hour). ' +
     'The tool converts it to an absolute schedule automatically.\n' +
     'Always prefer this tool over system schedulers like `at`, `crontab`, or `sleep`.\n\n' +
-    '**IMPORTANT: Agent selection rule** — When the user mentions a specific role (e.g. 政策助手, 法务助手, 财务军师) or the task clearly belongs to a domain (招投标→bid, 法律→legal, 政策→policy, 人力资源→hr, 财务→finance, 商业调研→business), you MUST set the `agent` field to the corresponding agent ID. Do NOT embed agent role instructions in the prompt — the selected agent will automatically apply its own system prompt and tools.',
+    '**IMPORTANT: Agent selection rule (MANDATORY)** — You MUST analyze the task content and set the `agent` field to the best-matching agent ID. ' +
+    'If you do not provide an agent, the task creation will fail.\n' +
+    'Do NOT embed agent role instructions in the prompt — the selected agent will automatically apply its own system prompt and tools.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -106,17 +111,7 @@ export const CronCreateTool: ToolDefinition = {
       durable: { type: 'boolean', description: 'Whether the task should survive temporary cleanup' },
       agent: {
         type: 'string',
-        description: [
-          'Agent ID to execute this task. Analyze the task content and select the best-matching agent.',
-          'Available agents:',
-          '- "bid": 投标战略师 — 招投标全流程（标书编制、竞对分析、报价策略、中标概率评估）',
-          '- "legal": 法务守门人 — 合同审查、法律文书、合规检查、风险识别',
-          '- "policy": 政策雷达 — 政策解读、红利估算、申报路径、合规预警（可创建/管理定时任务）',
-          '- "hr": 人才架构师 — 招聘、薪酬设计、劳动合同、考勤管理、人事制度',
-          '- "finance": 财务军师 — 报表分析、预算编制、成本优化、现金流预测、ROI测算',
-          '- "business": 商业侦探 — 市场调研、竞品分析、客户洞察、商业计划',
-          'Omit or leave empty to use the default general agent.',
-        ].join('\n'),
+        description: 'REQUIRED. Agent ID to execute this task. Analyze the task content and select the best-matching agent from the list above. Do NOT omit this field.',
       },
     },
     required: ['cron', 'prompt', 'recurring'],
@@ -182,13 +177,17 @@ export const CronCreateTool: ToolDefinition = {
     if (typeof input.durable === 'boolean') {
       task.permanent = input.durable
     }
-    let resolvedAgent = typeof input.agent === 'string' ? input.agent : undefined
+
+    const resolvedAgent = typeof input.agent === 'string' ? input.agent : undefined
     if (!resolvedAgent) {
-      resolvedAgent = inferAgentFromPrompt(input.prompt)
+      return {
+        type: 'tool_result',
+        tool_use_id: '',
+        content: '错误：创建 cron 任务时必须指定 agent 字段。请根据任务内容分析并选择最合适的 agent。',
+        is_error: true,
+      }
     }
-    if (resolvedAgent) {
-      task.agentId = resolvedAgent
-    }
+    task.agentId = resolvedAgent
 
     const id = await cronStorage.add(task)
     const description = cronToHuman(input.cron)

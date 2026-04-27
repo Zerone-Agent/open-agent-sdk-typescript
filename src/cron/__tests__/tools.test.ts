@@ -44,17 +44,32 @@ describe('CronCreateTool', () => {
 
   it('validates cron expressions and rejects invalid ones', async () => {
     const result = await CronCreateTool.call(
-      { cron: 'invalid cron', prompt: 'Run this', recurring: true },
+      { cron: 'invalid cron', prompt: 'Run this', recurring: true, agent: 'bid' },
       toolContext,
     )
 
     expect(result).toEqual({
       type: 'tool_result',
       tool_use_id: '',
-      content: 'Invalid cron expression: invalid cron',
+      content: 'Invalid cron expression: "invalid cron". Must be a valid 5-field cron (e.g. "0 16 * * *").',
       is_error: true,
     })
     expect(storage.load).not.toHaveBeenCalled()
+    expect(storage.add).not.toHaveBeenCalled()
+  })
+
+  it('rejects task creation without agent field', async () => {
+    const result = await CronCreateTool.call(
+      { cron: '*/5 * * * *', prompt: 'Run the report', recurring: true },
+      toolContext,
+    )
+
+    expect(result).toEqual({
+      type: 'tool_result',
+      tool_use_id: '',
+      content: '错误：创建 cron 任务时必须指定 agent 字段。请根据任务内容分析并选择最合适的 agent。',
+      is_error: true,
+    })
     expect(storage.add).not.toHaveBeenCalled()
   })
 
@@ -65,6 +80,7 @@ describe('CronCreateTool', () => {
         prompt: 'Run the report',
         recurring: true,
         durable: true,
+        agent: 'finance',
       },
       toolContext,
     )
@@ -76,6 +92,7 @@ describe('CronCreateTool', () => {
       prompt: 'Run the report',
       recurring: true,
       permanent: true,
+      agentId: 'finance',
     })
     expect(result.type).toBe('tool_result')
     expect(result.is_error).toBeUndefined()
