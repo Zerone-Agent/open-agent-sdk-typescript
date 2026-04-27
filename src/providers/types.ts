@@ -71,6 +71,7 @@ export interface CreateMessageResponse {
 export type NormalizedResponseBlock =
   | { type: 'text'; text: string }
   | { type: 'tool_use'; id: string; name: string; input: any }
+  | { type: 'thinking'; thinking: string }
 
 export interface StreamChunk {
   type: 'text' | 'thinking' | 'tool_use' | 'usage' | 'done'

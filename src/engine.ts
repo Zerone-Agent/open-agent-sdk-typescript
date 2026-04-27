@@ -171,8 +171,12 @@ export class QueryEngine {
       }
 
       if (chunk.type === 'thinking') {
-        // Thinking is not part of NormalizedResponseBlock, skip for now
-        // Could be added to content if needed
+        if (!currentBlock || currentBlock.type !== 'thinking') {
+          currentBlock = { type: 'thinking', thinking: chunk.delta || '' }
+          content.push(currentBlock)
+        } else {
+          currentBlock.thinking += chunk.delta || ''
+        }
       }
 
       if (chunk.type === 'tool_use') {

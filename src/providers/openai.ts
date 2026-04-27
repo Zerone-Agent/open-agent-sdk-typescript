@@ -60,6 +60,7 @@ async function* parseSSEStream(response: Response): AsyncGenerator<any> {
 interface OpenAIChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool'
   content?: string | null
+  reasoning_content?: string | null
   tool_calls?: OpenAIToolCall[]
   tool_call_id?: string
 }
@@ -89,6 +90,7 @@ interface OpenAIChatResponse {
     message: {
       role: 'assistant'
       content: string | null
+      reasoning_content?: string | null
       tool_calls?: OpenAIToolCall[]
     }
     finish_reason: 'stop' | 'length' | 'tool_calls' | 'content_filter' | string
@@ -209,6 +211,15 @@ export class OpenAIProvider implements LLMProvider {
 
       const delta = choice.delta
       if (!delta) continue
+
+      // Reasoning/thinking content (DeepSeek-R1, Qwen-QWQ, etc.)
+      if (delta.reasoning_content) {
+        yield {
+          type: 'thinking',
+          index: currentBlockIndex,
+          delta: delta.reasoning_content,
+        }
+      }
 
       // Text content
       if (delta.content) {
@@ -343,6 +354,8 @@ export class OpenAIProvider implements LLMProvider {
     for (const block of msg.content) {
       if (block.type === 'text') {
         textParts.push(block.text)
+      } else if (block.type === 'thinking') {
+        // Skip thinking blocks — OpenAI-compatible models don't need them in requests
       } else if (block.type === 'tool_use') {
         toolCalls.push({
           id: block.id,
@@ -399,6 +412,11 @@ export class OpenAIProvider implements LLMProvider {
     }
 
     const content: NormalizedResponseBlock[] = []
+
+    // Add thinking content (before text, matches streaming order)
+    if (choice.message.reasoning_content) {
+      content.push({ type: 'thinking', thinking: choice.message.reasoning_content })
+    }
 
     // Add text content
     if (choice.message.content) {
