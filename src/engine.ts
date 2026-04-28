@@ -732,7 +732,16 @@ export class QueryEngine {
           return {
             type: 'tool_result',
             tool_use_id: block.id,
-            content: permission.message || `Permission denied for tool "${block.name}"`,
+            content: permission.message || [
+              `Permission denied: the user rejected execution of tool "${block.name}".`,
+              '',
+              'Consider why the tool call was denied:',
+              '- If the tool call parameters seem correct, try rephrasing or adjusting your approach instead of repeating the same call.',
+              "- If you're unsure why the call was denied, ask the user for clarification.",
+              '- If the task can be accomplished through an alternative method, try that approach instead.',
+              '',
+              'Do NOT retry the exact same tool call with identical parameters.',
+            ].join('\n'),
             is_error: true,
             tool_name: block.name,
           }
@@ -759,11 +768,17 @@ export class QueryEngine {
     })
     // Check if any hook blocks this tool
     if (preHookResults.some((r) => r.block)) {
-      const msg = preHookResults.find((r) => r.message)?.message || 'Blocked by PreToolUse hook'
+      const hookMsg = preHookResults.find((r) => r.message)?.message
       return {
         type: 'tool_result',
         tool_use_id: block.id,
-        content: msg,
+        content: [
+          `Blocked by PreToolUse hook: ${hookMsg || 'no reason provided'}`,
+          '',
+          'This tool call was blocked by a user-configured hook. Consider:',
+          '- Adjusting your approach to avoid triggering the hook.',
+          '- Asking the user to check their hooks configuration if this is unexpected.',
+        ].join('\n'),
         is_error: true,
         tool_name: block.name,
       }

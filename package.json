@@ -12,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/Zerone-Agent/open-agent-sdk/issues"
   },
-  "version": "0.1.3",
+  "version": "0.1.5",
   "description": "Open-source Agent SDK. Runs the full agent loop in-process — no local CLI required. Deploy anywhere: cloud, serverless, Docker, CI/CD.",
   "type": "module",
   "main": "./dist/index.js",
@@ -28,7 +28,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"const fs=require('fs');const p=require('path');(function walk(dir){for(const f of fs.readdirSync(dir)){const fp=p.join(dir,f);fs.statSync(fp).isDirectory()?walk(fp):f.endsWith('.txt')&&fs.copyFileSync(fp,p.join('dist',p.relative('src',fp)))}})('src/tools')\"",
     "dev": "tsc --watch",
     "test": "npx tsx examples/01-simple-query.ts",
     "test:all": "for f in examples/*.ts; do echo \"--- Running $f ---\"; npx tsx $f; echo; done",
