@@ -454,6 +454,10 @@ export interface AgentOptions {
   sandbox?: SandboxSettings
   /** Load settings from filesystem */
   settingSources?: SettingSource[]
+  /** Additional user-level skill directories to scan (after default ~/.openagent/skills/) */
+  extraUserSkillDirs?: string[]
+  /** Additional project-level skill directories to scan (after default .openagent/skills/) */
+  extraProjectSkillDirs?: string[]
   /** Plugin configurations */
   plugins?: Array<{ name: string; config?: Record<string, unknown> }>
   /** Additional working directories */

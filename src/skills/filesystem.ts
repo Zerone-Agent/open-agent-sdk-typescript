@@ -18,16 +18,29 @@ interface LoadResult {
   errors: Error[]
 }
 
+interface ExtraDirs {
+  extraUserSkillDirs?: string[]
+  extraProjectSkillDirs?: string[]
+}
+
 /**
  * Load skills from filesystem directories based on settingSources.
- * 
+ *
+ * Loading order (later entries override earlier ones on name collision):
+ *   1. ~/.openagent/skills/                    (default user-level)
+ *   2. extraUserSkillDirs[0], [1], ...         (additional user-level)
+ *   3. <cwd>/.openagent/skills/                (default project-level)
+ *   4. extraProjectSkillDirs[0], [1], ...      (additional project-level)
+ *
  * @param cwd - Current working directory (project root)
  * @param settingSources - Array of sources to load from
+ * @param extraDirs - Additional directories to scan per level
  * @returns Number of loaded skills and any errors
  */
 export async function loadSkillsFromFilesystem(
   cwd: string,
-  settingSources?: SettingSource[]
+  settingSources?: SettingSource[],
+  extraDirs?: ExtraDirs,
 ): Promise<LoadResult> {
   if (!settingSources || settingSources.length === 0) {
     return { loaded: 0, errors: [] }
@@ -42,6 +55,13 @@ export async function loadSkillsFromFilesystem(
     const result = await loadSkillsFromDir(userSkillsDir)
     loaded += result.loaded
     errors.push(...result.errors)
+
+    // Extra user-level skill directories
+    for (const dir of extraDirs?.extraUserSkillDirs ?? []) {
+      const r = await loadSkillsFromDir(dir)
+      loaded += r.loaded
+      errors.push(...r.errors)
+    }
   }
 
   // Project-level skills (./.openagent/skills/)
@@ -50,6 +70,13 @@ export async function loadSkillsFromFilesystem(
     const result = await loadSkillsFromDir(projectSkillsDir)
     loaded += result.loaded
     errors.push(...result.errors)
+
+    // Extra project-level skill directories
+    for (const dir of extraDirs?.extraProjectSkillDirs ?? []) {
+      const r = await loadSkillsFromDir(dir)
+      loaded += r.loaded
+      errors.push(...r.errors)
+    }
   }
 
   return { loaded, errors }

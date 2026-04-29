@@ -227,7 +227,10 @@ export class Agent {
     if (this.cfg.settingSources && this.cfg.settingSources.length > 0) {
       try {
         const cwd = this.cfg.cwd ?? process.cwd()
-        await loadSkillsFromFilesystem(cwd, this.cfg.settingSources)
+        await loadSkillsFromFilesystem(cwd, this.cfg.settingSources, {
+          extraUserSkillDirs: this.cfg.extraUserSkillDirs,
+          extraProjectSkillDirs: this.cfg.extraProjectSkillDirs,
+        })
       } catch (error) {
         // Don't fail agent startup
         console.error('Failed to load filesystem skills:', error)
@@ -499,7 +502,10 @@ export class Agent {
     if (this.cfg.settingSources && this.cfg.settingSources.length > 0) {
       try {
         const cwd = this.cfg.cwd ?? process.cwd()
-        await loadSkillsFromFilesystem(cwd, this.cfg.settingSources)
+        await loadSkillsFromFilesystem(cwd, this.cfg.settingSources, {
+          extraUserSkillDirs: this.cfg.extraUserSkillDirs,
+          extraProjectSkillDirs: this.cfg.extraProjectSkillDirs,
+        })
       } catch (error) {
         console.error('Failed to reload filesystem skills:', error)
       }
