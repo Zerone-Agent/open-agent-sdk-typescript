@@ -122,6 +122,7 @@ export const AgentTool: ToolDefinition = {
       sessionId: subSessionId,
       allowedSkills: agentDef?.skills,
       settingSources: context.settingSources,
+      abortSignal: context.abortSignal,
     })
 
     const emitEvent = context.emitEvent
@@ -130,6 +131,8 @@ export const AgentTool: ToolDefinition = {
 
     try {
       for await (const event of engine.submitMessage(input.prompt)) {
+        if (context.abortSignal?.aborted) break
+
         if (event.type === 'assistant') {
           for (const block of event.message.content) {
             if ('text' in block && block.text) {

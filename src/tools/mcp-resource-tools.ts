@@ -4,7 +4,7 @@
  * ListMcpResources / ReadMcpResource - Access resources from MCP servers.
  */
 
-import type { ToolDefinition, ToolResult } from '../types.js'
+import type { ToolDefinition, ToolResult, ToolContext } from '../types.js'
 import type { MCPConnection } from '../mcp/client.js'
 
 // Registry of MCP connections (set by the agent)
@@ -30,7 +30,16 @@ export const ListMcpResourcesTool: ToolDefinition = {
   isConcurrencySafe: () => true,
   isEnabled: () => true,
   async prompt() { return 'List MCP resources.' },
-  async call(input: any): Promise<ToolResult> {
+  async call(input: any, context: ToolContext): Promise<ToolResult> {
+    if (context.abortSignal?.aborted) {
+      return {
+        type: 'tool_result',
+        tool_use_id: '',
+        content: 'Aborted',
+        is_error: true,
+      }
+    }
+
     const connections = input.server
       ? mcpConnections.filter(c => c.name === input.server)
       : mcpConnections
@@ -87,7 +96,16 @@ export const ReadMcpResourceTool: ToolDefinition = {
   isConcurrencySafe: () => true,
   isEnabled: () => true,
   async prompt() { return 'Read an MCP resource.' },
-  async call(input: any): Promise<ToolResult> {
+  async call(input: any, context: ToolContext): Promise<ToolResult> {
+    if (context.abortSignal?.aborted) {
+      return {
+        type: 'tool_result',
+        tool_use_id: '',
+        content: 'Aborted',
+        is_error: true,
+      }
+    }
+
     const conn = mcpConnections.find(c => c.name === input.server)
     if (!conn) {
       return {

@@ -29,8 +29,6 @@ export const GlobTool = defineTool({
     const { pattern } = input
 
     try {
-      // Use Node.js glob (available in Node 22+)
-      // @ts-ignore - glob is available in Node 22+, ts lib is older
       const fsPromises = await import('fs/promises')
       // @ts-ignore
       const globFn = fsPromises.glob
@@ -38,6 +36,7 @@ export const GlobTool = defineTool({
         const matches: string[] = []
         // @ts-ignore
         for await (const entry of globFn(pattern, { cwd: searchDir })) {
+          if (context.abortSignal?.aborted) break
           matches.push(entry)
           if (matches.length >= 500) break
         }
@@ -59,6 +58,10 @@ export const GlobTool = defineTool({
         cwd: searchDir,
         timeout: 30000,
       })
+
+      if (context.abortSignal) {
+        context.abortSignal.addEventListener('abort', () => proc.kill('SIGTERM'), { once: true })
+      }
 
       const chunks: Buffer[] = []
       proc.stdout?.on('data', (d: Buffer) => chunks.push(d))

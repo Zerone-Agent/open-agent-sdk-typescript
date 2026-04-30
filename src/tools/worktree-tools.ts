@@ -5,9 +5,12 @@
  * for parallel work without affecting the main working tree.
  */
 
-import { execSync } from 'child_process'
+import { exec } from 'child_process'
+import { promisify } from 'util'
 import { join } from 'path'
-import type { ToolDefinition, ToolResult } from '../types.js'
+import type { ToolDefinition, ToolResult, ToolContext } from '../types.js'
+
+const execAsync = promisify(exec)
 
 // Track active worktrees
 const activeWorktrees = new Map<string, { path: string; branch: string; originalCwd: string }>()
@@ -26,25 +29,23 @@ export const EnterWorktreeTool: ToolDefinition = {
   isConcurrencySafe: () => false,
   isEnabled: () => true,
   async prompt() { return 'Create an isolated git worktree for parallel work.' },
-  async call(input: any, context: { cwd: string }): Promise<ToolResult> {
+  async call(input: any, context: ToolContext): Promise<ToolResult> {
     try {
-      // Check if we're in a git repo
-      execSync('git rev-parse --git-dir', { cwd: context.cwd, encoding: 'utf-8' })
+      await execAsync('git rev-parse --git-dir', { cwd: context.cwd, encoding: 'utf-8', signal: context.abortSignal })
 
       const branch = input.branch || `worktree-${Date.now()}`
       const worktreePath = input.path || join(context.cwd, '..', `.worktree-${branch}`)
 
-      // Create the branch if it doesn't exist
       try {
-        execSync(`git branch ${branch}`, { cwd: context.cwd, encoding: 'utf-8', stdio: 'pipe' })
+        await execAsync(`git branch ${branch}`, { cwd: context.cwd, encoding: 'utf-8', signal: context.abortSignal })
       } catch {
         // Branch might already exist
       }
 
-      // Create worktree
-      execSync(`git worktree add ${JSON.stringify(worktreePath)} ${branch}`, {
+      await execAsync(`git worktree add ${JSON.stringify(worktreePath)} ${branch}`, {
         cwd: context.cwd,
         encoding: 'utf-8',
+        signal: context.abortSignal,
       })
 
       const id = crypto.randomUUID()
@@ -89,7 +90,7 @@ export const ExitWorktreeTool: ToolDefinition = {
   isConcurrencySafe: () => false,
   isEnabled: () => true,
   async prompt() { return 'Exit a git worktree.' },
-  async call(input: any): Promise<ToolResult> {
+  async call(input: any, context: ToolContext): Promise<ToolResult> {
     const worktree = activeWorktrees.get(input.id)
     if (!worktree) {
       return {
@@ -104,16 +105,16 @@ export const ExitWorktreeTool: ToolDefinition = {
 
     try {
       if (action === 'remove') {
-        execSync(`git worktree remove ${JSON.stringify(worktree.path)} --force`, {
+        await execAsync(`git worktree remove ${JSON.stringify(worktree.path)} --force`, {
           cwd: worktree.originalCwd,
           encoding: 'utf-8',
+          signal: context.abortSignal,
         })
-        // Clean up branch
         try {
-          execSync(`git branch -D ${worktree.branch}`, {
+          await execAsync(`git branch -D ${worktree.branch}`, {
             cwd: worktree.originalCwd,
             encoding: 'utf-8',
-            stdio: 'pipe',
+            signal: context.abortSignal,
           })
         } catch {
           // Branch might have commits
