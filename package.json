@@ -12,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/Zerone-Agent/open-agent-sdk/issues"
   },
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Open-source Agent SDK. Runs the full agent loop in-process — no local CLI required. Deploy anywhere: cloud, serverless, Docker, CI/CD.",
   "type": "module",
   "main": "./dist/index.js",
