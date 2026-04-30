@@ -341,34 +341,44 @@ export class Agent {
       (engine as any).messages.push(msg)
     }
 
-    // Run the engine
-    for await (const event of engine.submitMessage(prompt)) {
-      yield event
+    // Run the engine (try/finally ensures persistence even on abort)
+    try {
+      for await (const event of engine.submitMessage(prompt)) {
+        yield event
 
-      // Track assistant messages for multi-turn persistence
-      if (event.type === 'assistant') {
-        const uuid = crypto.randomUUID()
-        const timestamp = new Date().toISOString()
-        this.messageLog.push({
-          type: 'assistant',
-          message: event.message,
-          uuid,
-          timestamp,
-        })
+        if (event.type === 'assistant') {
+          const uuid = crypto.randomUUID()
+          const timestamp = new Date().toISOString()
+          this.messageLog.push({
+            type: 'assistant',
+            message: event.message,
+            uuid,
+            timestamp,
+          })
+        }
+      }
+    } finally {
+      this.history = engine.getMessages()
+
+      this.messageLog.push({
+        type: 'user',
+        message: { role: 'user', content: prompt },
+        uuid: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+      })
+
+      if (this.cfg.persistSession !== false && this.history.length > 0) {
+        try {
+          await saveSession(this.sid, this.history, {
+            cwd: this.cfg.cwd || process.cwd(),
+            model: this.modelId,
+            summary: undefined,
+          })
+        } catch {
+          // best-effort
+        }
       }
     }
-
-    // Persist conversation state for multi-turn
-    this.history = engine.getMessages()
-
-    // Add user message to tracked messages
-    const userUuid = crypto.randomUUID()
-    this.messageLog.push({
-      type: 'user',
-      message: { role: 'user', content: prompt },
-      uuid: userUuid,
-      timestamp: new Date().toISOString(),
-    })
   }
 
   /**
