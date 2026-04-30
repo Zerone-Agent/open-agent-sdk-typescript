@@ -379,7 +379,10 @@ export class QueryEngine {
                   budget_tokens: this.config.thinking.budgetTokens,
                 }
                 : undefined,
+            signal: this.config.abortSignal,
           })) {
+            if (this.config.abortSignal?.aborted) break
+
             chunks.push(chunk)
 
             // Accumulate usage from stream
@@ -531,7 +534,20 @@ export class QueryEngine {
       const waitForEventOrDone = (): Promise<void> =>
         new Promise((resolve) => {
           if (pendingSubagentEvents.length > 0 || toolsDone) return resolve()
+          if (this.config.abortSignal?.aborted) return resolve()
+
           eventNotifier = resolve
+          const onAbort = () => {
+            eventNotifier = null
+            resolve()
+          }
+          this.config.abortSignal?.addEventListener('abort', onAbort, { once: true })
+
+          const origNotifier = eventNotifier
+          eventNotifier = () => {
+            this.config.abortSignal?.removeEventListener('abort', onAbort)
+            origNotifier?.()
+          }
         })
 
       let toolError: Error | null = null
@@ -553,6 +569,7 @@ export class QueryEngine {
 
       // Yield subagent events as they arrive, in real-time
       while (!toolsDone || pendingSubagentEvents.length > 0) {
+        if (this.config.abortSignal?.aborted) break
         if (pendingSubagentEvents.length > 0) {
           yield pendingSubagentEvents.shift()!
           continue
@@ -677,6 +694,7 @@ export class QueryEngine {
 
     // Execute read-only tools concurrently (batched by MAX_CONCURRENCY)
     for (let i = 0; i < readOnly.length; i += MAX_CONCURRENCY) {
+      if (this.config.abortSignal?.aborted) break
       const batch = readOnly.slice(i, i + MAX_CONCURRENCY)
       const batchResults = await Promise.all(
         batch.map((item) =>
@@ -688,6 +706,7 @@ export class QueryEngine {
 
     // Execute mutation tools sequentially
     for (const item of mutations) {
+      if (this.config.abortSignal?.aborted) break
       const result = await this.executeSingleTool(item.block, item.tool, makeContext(item.block))
       results.push(result)
     }

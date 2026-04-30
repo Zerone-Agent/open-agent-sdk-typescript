@@ -42,7 +42,9 @@ export class AnthropicProvider implements LLMProvider {
       }
     }
 
-    const response = await this.client.messages.create(requestParams)
+    const response = await this.client.messages.create(requestParams, {
+      signal: params.signal,
+    })
 
     return {
       content: response.content as CreateMessageResponse['content'],
@@ -77,7 +79,9 @@ export class AnthropicProvider implements LLMProvider {
       }
     }
 
-    const stream = await this.client.messages.create(requestParams)
+    const stream = await this.client.messages.create(requestParams, {
+      signal: params.signal,
+    })
 
     const toolInputs: Map<number, string> = new Map()
     const toolUseIds: Map<number, string> = new Map()

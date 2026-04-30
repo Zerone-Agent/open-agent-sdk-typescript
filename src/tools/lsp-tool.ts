@@ -5,8 +5,11 @@
  * hover, document symbols, workspace symbols, etc.
  */
 
-import { execSync } from 'child_process'
-import type { ToolDefinition, ToolResult } from '../types.js'
+import { exec } from 'child_process'
+import { promisify } from 'util'
+import type { ToolDefinition, ToolResult, ToolContext } from '../types.js'
+
+const execAsync = promisify(exec)
 
 export const LSPTool: ToolDefinition = {
   name: 'LSP',
@@ -40,7 +43,7 @@ export const LSPTool: ToolDefinition = {
   isConcurrencySafe: () => true,
   isEnabled: () => true,
   async prompt() { return 'Code intelligence via Language Server Protocol.' },
-  async call(input: any, context: { cwd: string }): Promise<ToolResult> {
+  async call(input: any, context: ToolContext): Promise<ToolResult> {
     const { operation, file_path, line, character, query } = input
 
     // LSP requires a running language server. In standalone mode,
@@ -57,11 +60,11 @@ export const LSPTool: ToolDefinition = {
           if (!symbol) {
             return { type: 'tool_result', tool_use_id: '', content: 'Could not identify symbol at position' }
           }
-          const results = execSync(
+          const { stdout: results } = await execAsync(
             `rg -n "(?:function|class|interface|type|const|let|var|export)\\s+${symbol}" --type-add 'src:*.{ts,tsx,js,jsx,py,go,rs,java}' -t src ${context.cwd} 2>/dev/null || grep -rn "(?:function|class|interface|type|const|let|var|export)\\s*${symbol}" ${context.cwd} --include='*.ts' --include='*.js' 2>/dev/null`,
-            { encoding: 'utf-8', timeout: 10000 },
-          ).trim()
-          return { type: 'tool_result', tool_use_id: '', content: results || `No definition found for "${symbol}"` }
+            { encoding: 'utf-8', timeout: 10000, signal: context.abortSignal },
+          )
+          return { type: 'tool_result', tool_use_id: '', content: results.trim() || `No definition found for "${symbol}"` }
         }
 
         case 'findReferences': {
@@ -72,11 +75,11 @@ export const LSPTool: ToolDefinition = {
           if (!sym) {
             return { type: 'tool_result', tool_use_id: '', content: 'Could not identify symbol at position' }
           }
-          const refs = execSync(
+          const { stdout: refs } = await execAsync(
             `rg -n "${sym}" ${context.cwd} --type-add 'src:*.{ts,tsx,js,jsx,py,go,rs,java}' -t src 2>/dev/null | head -50`,
-            { encoding: 'utf-8', timeout: 10000 },
-          ).trim()
-          return { type: 'tool_result', tool_use_id: '', content: refs || `No references found for "${sym}"` }
+            { encoding: 'utf-8', timeout: 10000, signal: context.abortSignal },
+          )
+          return { type: 'tool_result', tool_use_id: '', content: refs.trim() || `No references found for "${sym}"` }
         }
 
         case 'hover': {
@@ -91,22 +94,22 @@ export const LSPTool: ToolDefinition = {
           if (!file_path) {
             return { type: 'tool_result', tool_use_id: '', content: 'file_path required', is_error: true }
           }
-          const symbols = execSync(
+          const { stdout: symbols } = await execAsync(
             `rg -n "^\\s*(export\\s+)?(function|class|interface|type|const|let|var|enum)\\s+" ${JSON.stringify(file_path)} 2>/dev/null || grep -n "^\\s*\\(export\\s\\+\\)\\?\\(function\\|class\\|interface\\|type\\|const\\|let\\|var\\|enum\\)\\s" ${JSON.stringify(file_path)} 2>/dev/null`,
-            { encoding: 'utf-8', cwd: context.cwd, timeout: 10000 },
-          ).trim()
-          return { type: 'tool_result', tool_use_id: '', content: symbols || 'No symbols found' }
+            { encoding: 'utf-8', cwd: context.cwd, timeout: 10000, signal: context.abortSignal },
+          )
+          return { type: 'tool_result', tool_use_id: '', content: symbols.trim() || 'No symbols found' }
         }
 
         case 'workspaceSymbol': {
           if (!query) {
             return { type: 'tool_result', tool_use_id: '', content: 'query required', is_error: true }
           }
-          const wsSymbols = execSync(
+          const { stdout: wsSymbols } = await execAsync(
             `rg -n "${query}" ${context.cwd} --type-add 'src:*.{ts,tsx,js,jsx,py,go,rs,java}' -t src 2>/dev/null | head -30`,
-            { encoding: 'utf-8', timeout: 10000 },
-          ).trim()
-          return { type: 'tool_result', tool_use_id: '', content: wsSymbols || `No symbols found for "${query}"` }
+            { encoding: 'utf-8', timeout: 10000, signal: context.abortSignal },
+          )
+          return { type: 'tool_result', tool_use_id: '', content: wsSymbols.trim() || `No symbols found for "${query}"` }
         }
 
         default:

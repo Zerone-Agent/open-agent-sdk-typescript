@@ -355,6 +355,10 @@ export const GrepTool = defineTool({
         timeout: 30000,
       })
 
+      if (context.abortSignal) {
+        context.abortSignal.addEventListener('abort', () => proc.kill('SIGTERM'), { once: true })
+      }
+
       const chunks: Buffer[] = []
       const errChunks: Buffer[] = []
       proc.stdout?.on('data', (d: Buffer) => chunks.push(d))
@@ -378,12 +382,15 @@ export const GrepTool = defineTool({
             timeout: 30000,
           })
 
+          if (context.abortSignal) {
+            context.abortSignal.addEventListener('abort', () => grepProc.kill('SIGTERM'), { once: true })
+          }
+
           const grepChunks: Buffer[] = []
           grepProc.stdout?.on('data', (d: Buffer) => grepChunks.push(d))
           grepProc.on('close', async () => {
             const grepResult = Buffer.concat(grepChunks).toString('utf-8').trim()
             if (!grepResult) {
-              // Final fallback: use pure Node.js implementation
               const nodeResult = await nodeGrep(input.pattern, searchPath, {
                 ignoreCase: input['-i'],
                 outputMode,
@@ -396,7 +403,6 @@ export const GrepTool = defineTool({
               })
               resolvePromise(nodeResult)
             } else {
-              // Apply head limit
               const lines = grepResult.split('\n')
               if (headLimit > 0 && lines.length > headLimit) {
                 resolvePromise(lines.slice(0, headLimit).join('\n') + `\n... (${lines.length - headLimit} more)`)
@@ -406,7 +412,6 @@ export const GrepTool = defineTool({
             }
           })
           grepProc.on('error', async () => {
-            // grep not available, use pure Node.js implementation
             const nodeResult = await nodeGrep(input.pattern, searchPath, {
               ignoreCase: input['-i'],
               outputMode,
@@ -427,7 +432,6 @@ export const GrepTool = defineTool({
           return
         }
 
-        // Apply head limit
         const lines = result.split('\n')
         if (headLimit > 0 && lines.length > headLimit) {
           result = lines.slice(0, headLimit).join('\n') + `\n... (${lines.length - headLimit} more)`
@@ -437,12 +441,16 @@ export const GrepTool = defineTool({
       })
 
       proc.on('error', async () => {
-        // rg not found, try grep directly
         const grepArgs = ['-r', '-n', '--', input.pattern, searchPath]
         const grepProc = spawn('grep', grepArgs, {
           cwd: context.cwd,
           timeout: 30000,
         })
+
+        if (context.abortSignal) {
+          context.abortSignal.addEventListener('abort', () => grepProc.kill('SIGTERM'), { once: true })
+        }
+
         const grepChunks: Buffer[] = []
         grepProc.stdout?.on('data', (d: Buffer) => grepChunks.push(d))
         grepProc.on('close', async () => {
@@ -450,7 +458,6 @@ export const GrepTool = defineTool({
           if (grepResult) {
             resolvePromise(grepResult)
           } else {
-            // Use pure Node.js implementation
             const nodeResult = await nodeGrep(input.pattern, searchPath, {
               ignoreCase: input['-i'],
               outputMode,
@@ -465,7 +472,6 @@ export const GrepTool = defineTool({
           }
         })
         grepProc.on('error', async () => {
-          // grep also not available, use pure Node.js implementation
           const nodeResult = await nodeGrep(input.pattern, searchPath, {
             ignoreCase: input['-i'],
             outputMode,

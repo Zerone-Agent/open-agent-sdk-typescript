@@ -25,6 +25,7 @@ export interface CreateMessageParams {
   messages: NormalizedMessageParam[]
   tools?: NormalizedTool[]
   thinking?: { type: string; budget_tokens?: number }
+  signal?: AbortSignal
 }
 
 /**

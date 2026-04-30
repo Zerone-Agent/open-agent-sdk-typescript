@@ -71,7 +71,7 @@ export const WebSearchTool = defineTool({
   },
   isReadOnly: true,
   isConcurrencySafe: true,
-  async call(input, _context) {
+  async call(input, context) {
     const { query, numResults = 8, livecrawl = 'fallback', type = 'auto' } = input
 
     const request: McpRequest = {
@@ -88,6 +88,9 @@ export const WebSearchTool = defineTool({
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT)
 
+      const signals = [controller.signal]
+      if (context.abortSignal) signals.push(context.abortSignal)
+
       const response = await fetch(EXA_MCP_URL, {
         method: 'POST',
         headers: {
@@ -95,7 +98,7 @@ export const WebSearchTool = defineTool({
           Accept: 'application/json, text/event-stream',
         },
         body: JSON.stringify(request),
-        signal: controller.signal,
+        signal: AbortSignal.any(signals),
       })
 
       clearTimeout(timeoutId)

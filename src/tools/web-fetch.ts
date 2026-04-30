@@ -23,8 +23,11 @@ export const WebFetchTool = defineTool({
   },
   isReadOnly: true,
   isConcurrencySafe: true,
-  async call(input, _context) {
+  async call(input, context) {
     const { url, headers } = input
+
+    const signals = [AbortSignal.timeout(30000)]
+    if (context.abortSignal) signals.push(context.abortSignal)
 
     try {
       const response = await fetch(url, {
@@ -32,7 +35,7 @@ export const WebFetchTool = defineTool({
           'User-Agent': 'Mozilla/5.0 (compatible; AgentSDK/1.0)',
           ...headers,
         },
-        signal: AbortSignal.timeout(30000),
+        signal: AbortSignal.any(signals),
       })
 
       if (!response.ok) {
