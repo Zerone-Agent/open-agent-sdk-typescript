@@ -360,51 +360,53 @@ export class QueryEngine {
             throw new Error('Streaming not supported by this provider')
           }
 
-          // Streaming mode
-          // Note: Retry is not applied here because we yield partial messages as they arrive.
-          // If the stream fails mid-way, we let the error propagate.
           const chunks: import('./providers/types.js').StreamChunk[] = []
           const streamUsage = { input_tokens: 0, output_tokens: 0 }
 
-          for await (const chunk of this.provider.createMessageStream({
-            model: this.config.model,
-            maxTokens: this.config.maxTokens,
-            system: systemPrompt,
-            messages: apiMessages,
-            tools: tools.length > 0 ? tools : undefined,
-            thinking:
-              this.config.thinking?.type === 'enabled'
-                ? {
-                  type: 'enabled',
-                  budget_tokens: this.config.thinking.budgetTokens,
-                }
-                : undefined,
-            signal: this.config.abortSignal,
-          })) {
-            if (this.config.abortSignal?.aborted) break
+          try {
+            for await (const chunk of this.provider.createMessageStream({
+              model: this.config.model,
+              maxTokens: this.config.maxTokens,
+              system: systemPrompt,
+              messages: apiMessages,
+              tools: tools.length > 0 ? tools : undefined,
+              thinking:
+                this.config.thinking?.type === 'enabled'
+                  ? {
+                    type: 'enabled',
+                    budget_tokens: this.config.thinking.budgetTokens,
+                  }
+                  : undefined,
+              signal: this.config.abortSignal,
+            })) {
+              if (this.config.abortSignal?.aborted) break
 
-            chunks.push(chunk)
+              chunks.push(chunk)
 
-            // Accumulate usage from stream
-            if (chunk.type === 'usage' && chunk.usage) {
-              streamUsage.input_tokens += chunk.usage.input_tokens
-              streamUsage.output_tokens += chunk.usage.output_tokens
-            }
-
-            // Yield partial messages for text and thinking
-            if (chunk.type === 'text' || chunk.type === 'thinking') {
-              yield {
-                type: 'partial_message',
-                partial: {
-                  type: chunk.type,
-                  text: chunk.delta || '',
-                },
+              if (chunk.type === 'usage' && chunk.usage) {
+                streamUsage.input_tokens += chunk.usage.input_tokens
+                streamUsage.output_tokens += chunk.usage.output_tokens
               }
+
+              if (chunk.type === 'text' || chunk.type === 'thinking') {
+                yield {
+                  type: 'partial_message',
+                  partial: {
+                    type: chunk.type,
+                    text: chunk.delta || '',
+                  },
+                }
+              }
+            }
+          } catch (err: any) {
+            if (this.config.abortSignal?.aborted && chunks.length > 0) {
+              // Provider threw on abort but we have partial content — fall through
+            } else {
+              throw err
             }
           }
 
           response = this.buildResponseFromChunks(chunks)
-          // Use stream usage if available
           if (streamUsage.input_tokens > 0 || streamUsage.output_tokens > 0) {
             response.usage = streamUsage
           }
